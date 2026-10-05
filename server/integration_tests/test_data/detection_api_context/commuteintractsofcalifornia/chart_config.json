@@ -1,0 +1,31 @@
+{
+  "childEntityType": "CensusTract",
+  "classifications": [
+    {
+      "contained_in_place_type": "CensusTract",
+      "had_default_type": false,
+      "type": 4
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [],
+  "comparisonVariables": [],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "geoId/06"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "dc/topic/WorkCommute",
+    "dc/topic/CommuteMode",
+    "dc/topic/CommuteTime",
+    "dc/topic/CommuteModeByOccupation",
+    "Mean_CommuteTime_Person_Years16Onwards_WorkCommute_Employed_WorkedOutsideOfHome",
+    "dc/hbkh95kc7pkb6",
+    "dc/vp8cbt6k79t94",
+    "dc/0gettc3bc60cb"
+  ]
+}

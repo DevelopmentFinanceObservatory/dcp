@@ -1,0 +1,47 @@
+name: DFO checks
+
+# ONE/DFO: the reusable body behind ci.yml and the deploy workflows' gate.
+# Checks the DFO-owned code paths only, not the upstream Data Commons test
+# suite; upstream code outside custom_dc/ is tested upstream. Two lanes:
+#   - custom_dc/dfo/prototypes: the Next.js frontend (TypeScript, vitest).
+#   - custom_dc/api_server: the Search API engine (ruff, ty, pytest).
+#
+# `on: workflow_call` rather than plain jobs in ci.yml so deploy-dev.yml and
+# deploy-prod.yml can `needs:` it directly, including on their
+# workflow_dispatch path, which a `workflow_run` trigger off ci.yml would not
+# cover. ci.yml and deploy-dev.yml both fire independently on push to dev;
+# without this shared dependency, a merge with red tests could still build,
+# push, and pin while ci.yml separately reported failure.
+
+on:
+  workflow_call: {}
+
+jobs:
+  prototypes:
+    name: prototypes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: custom_dc/dfo/prototypes
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Pinned to the patch that carries jsdom's ^20.19.0 floor -- a
+          # `"20"` minor pin can resolve below that and break tests, not
+          # installs, since npm ci doesn't enforce engines.
+          node-version: "20.19"
+          cache: npm
+          cache-dependency-path: custom_dc/dfo/prototypes/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # tsc --noEmit. No lint step here: the prototypes app carries no
+      # ESLint config, so there is nothing to wire up.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test

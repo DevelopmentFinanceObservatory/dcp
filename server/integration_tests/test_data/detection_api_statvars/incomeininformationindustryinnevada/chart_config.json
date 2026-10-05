@@ -1,0 +1,41 @@
+{
+  "childEntityType": "",
+  "classifications": [
+    {
+      "type": 100
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [],
+  "comparisonVariables": [],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "geoId/32"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "dc/xj2nk2bg60fg",
+    "dc/topic/Income",
+    "Amount_EconomicActivity_GrossDomesticProduction_NAICSInformation_RealValue",
+    "Count_Worker_NAICSInformation",
+    "WagesTotal_Worker_NAICSInformation",
+    "dc/topic/IndividualIncomeByIndustry",
+    "ReceiptsOrRevenue_Establishment_NAICSInformation_WithPayroll",
+    "USStateQuarterlyIndustryGDP_NAICS_51",
+    "WagesAnnual_Establishment_NAICSInformation",
+    "Count_Person_15OrMoreYears_WithIncome",
+    "dc/topic/IndustriesByRevenue",
+    "dc/topic/IncomeEquity",
+    "Count_Person_15OrMoreYears_InformationAndTelecommunication_Employed",
+    "dc/x3gghqtglpr59",
+    "dc/topic/GDPByIndustry",
+    "dc/topic/VeteransIncome",
+    "Count_Person_16OrMoreYears_WithEarnings",
+    "Count_Person_Employed_NACE/J",
+    "dc/topic/InternetPublishingAndBroadcastingIndustry",
+    "Income_Farm"
+  ]
+}

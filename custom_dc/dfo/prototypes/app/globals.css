@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Palette tokens and animation keyframes live in tailwind.config.ts. The shimmer
+   keyframe stays here since it drives a custom pseudo-element, not a utility. */
+@keyframes ss-shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* Thin custom layer — effects that don't read well as utilities. */
+
+/* Skeleton: a solid base stays visible while a highlight band sweeps over it. */
+.ss-skel {
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e5e5; /* g2 — v3 has no --color-* vars, use the literal */
+  border-radius: 8px;
+}
+.ss-skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: ss-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Hero home→active: the search bar stays put while heading/starters collapse. */
+.ss-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-top: 15vh;
+  /* Stay elevated so the bar paints above the result content during the
+     home → active transition. */
+  position: relative;
+  z-index: 50;
+  transition: padding-top 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ss-app.is-active .ss-hero { padding-top: 0.25rem; }
+.ss-hero-head {
+  text-align: center;
+  overflow: hidden;
+  max-height: 200px;
+  opacity: 1;
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+.ss-app.is-active .ss-hero-head { max-height: 0; opacity: 0; }
+.ss-hero-starters {
+  overflow: hidden;
+  max-height: 160px;
+  opacity: 1;
+  visibility: visible;
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s;
+}
+.ss-app.is-active .ss-hero-starters {
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, visibility 0s 0.45s;
+}
+
+/* One-time attention cue on an editable sentence-phrase underline when a fresh
+   result lands (SentenceRenderer's `cueEditable` prop) — the small status line
+   is otherwise the only hint a phrase is clickable. Subtle: a soft underline
+   emphasis, not a marketing-site flourish. The blanket `prefers-reduced-motion`
+   rule below (`.ss-app * { animation: none !important }`) already turns this
+   into a no-op for reduced-motion users, leaving the static affordance. */
+.ss-cue-editable { animation: ss-cue-pulse 1.2s ease-out 1; }
+@keyframes ss-cue-pulse {
+  0%, 100% { box-shadow: none; }
+  40% { box-shadow: 0 2px 0 0 #1f1f1f; } /* g6 — v3 has no --color-* vars, use the literal */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-app *,
+  .ss-app *::before,
+  .ss-app *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

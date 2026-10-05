@@ -1,0 +1,523 @@
+#!/bin/bash
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# See documentation in the help function below.
+
+help() {
+cat << EOF
+Usage:
+
+./run_cdc_dev_docker.sh [--env_file|-e <env.list file path>] 
+  [--actions|-a run|build_run|build|build_upload|upload] [--container|-c all|service]
+  [--image|-i <custom image name:tag>] 
+  [--package|-p <package name:tag>] [--schema_update|-s]
+
+If no options are set, the default is '--env_file $PWD/custom_dc/env.list --actions run --container all'
+All containers are run using the Data Commons-provided 'stable' image.
+
+Options:
+
+--env_file|-e <path to env.list file> 
+  Optional: The path and file name of the environment file env.list. 
+  Default: custom_dc/env.list
+  Use this option to maintain multiple alternate environment files with different settings and directories (helpful for testing).
+      
+--actions|-a
+  Optional: The different Docker commands to run. 
+  Default: run: Runs containers, using a prebuilt release or a custom build.
+  Other options are:
+  * build: Only build a custom service image, don't run any containers.
+  * build_run: Build a custom service image and run containers.
+  * build_upload: Build a custom service image and upload it to Google Cloud 
+    (no containers run). 
+  * upload: Upload a previously built image (no containers run). 
+  With all these options, you must also specify '--image' with the (source) 
+  image name and tag.
+
+--container|-c all|service|data
+  Optional: The containers to run.
+  Default with 'run' and 'build_run': all: Run all containers. Other options are:
+  * service: Only run the service container. You can use this if you have not made any changes to your data, or   you are only running the service container locally (with the data container in the cloud) Exclusive with '--schema-update'.
+  * data: Only run the data container. This is only valid if you are running the data container locally (with the service container in the cloud).
+  Only valid with 'run'. Ignored otherwise.
+  For "hybrid" setups, the script will infer the correct container to run from the env.list file; this setting will be ignored.
+
+--image|-i <custom image name:tag>
+  Optional with 'run': the name and tag of the custom image to run in the service container.
+  Required for all other actions: the name and tag of the custom image to build/run/upload.
+  
+--package|-p <target package name:tag>
+  Optional: The target image to be created and uploaded to Google Cloud.
+  Default: same as the name and tag provided in the '--image' option.
+  Only valid with 'build_upload' and 'upload'; ignored otherwise.
+     
+--schema_update|-s
+  Optional. In the rare case that you get a 'SQL checked failed' error in
+  your running service, you can set this to run the data container in 
+  schema update mode, which skips embeddings generation and completes much faster.
+  Only valid with 'run' and 'build_run' actions and 'all' or 'data' containers; ignored otherwise.
+  
+Examples:
+
+./run_cdc_dev_docker.sh
+  Start all containers, using the prebuilt 'stable' release from Data Commons team.
+
+./run_cdc_dev_docker.sh --container service
+  Start only the service container, using the prebuilt 'stable' release.
+  Use this if you haven't made any changes to your data but just want to pick 
+  up the latest, stable code.
+
+./run_cdc_dev_docker.sh --image my-datacommons:dev
+  Start all containers, using a custom-built image for the service container.
+
+./run_cdc_dev_docker.sh --actions build --image my-datacommons:dev
+  Build a custom image only, and don't start any containers. Use this if you are building a custom image that you will upload and test later in Google Cloud.
+
+./run_cdc_dev_docker.sh --actions build_run --image my-datacommons:dev --container service
+  Build a custom image and only start the service. Use this if you haven't made any changes to your data but are developing your custom site.
+
+./run_cdc_dev_docker.sh --actions build_upload --image my-datacommons:dev
+  Build a custom image, create a package with the same name and tag, and upload
+  it to the Cloud Artifact Registry. Does not start any local containers.
+
+For more details, see https://docs.datacommons.org/custom_dc/
+EOF
+}
+
+cd $(dirname "$0")
+source scripts/utils.sh
+set -e
+
+# Build custom image
+build() {
+  log_notice "Starting Docker build of '$IMAGE'. This will take several minutes..."
+  local website_hash=$(git rev-parse --short=7 HEAD 2>/dev/null || echo "")
+  local mixer_hash=$(git rev-parse --short=7 HEAD:mixer 2>/dev/null || echo "")
+  docker build --tag $IMAGE \
+    --build-arg MIXER_HASH="$mixer_hash" \
+    --build-arg WEBSITE_HASH="$website_hash" \
+    -f build/cdc_services/Dockerfile .
+}
+
+# Package and push custom image to GCP
+upload() {
+  check_app_credentials
+  # Need Docker credentials for running docker tag to create an Artifact Registry package
+  get_docker_credentials
+  log_notice "Creating package '$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$GOOGLE_CLOUD_PROJECT-artifacts/${PACKAGE}'..."
+  docker tag ${IMAGE} ${GOOGLE_CLOUD_REGION}-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/${GOOGLE_CLOUD_PROJECT}-artifacts/${PACKAGE}
+  # Need principal account credentials to run docker push.
+  check_gcloud_credentials
+  log_notice "Uploading package to Google Artifact Registry. This will take several minutes..."
+  docker push ${GOOGLE_CLOUD_REGION}-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/${GOOGLE_CLOUD_PROJECT}-artifacts/${PACKAGE}
+}
+
+# Run data container
+run_data() {
+
+# 1. Set local image variable, construct and print output message
+
+  local message
+  message="Starting Docker data container with stable release"
+
+  if [[ "$SCHEMA_UPDATE" == true ]]; then
+    message+=" in schema update mode"
+  fi
+  if [[ "$data_hybrid" == true ]]; then
+    message+=" and writing output to Google Cloud"
+  fi
+  message+="..."
+
+  log_notice "$message"
+
+# 2. Define base Docker arguments shared by all modes
+  local docker_args=(
+    -it
+    --env-file "$ENV_FILE"
+    -e DEBUG=true
+    -v "$INPUT_DIR:$INPUT_DIR"
+  )
+
+# 3. Conditionally add GCP Credentials for remote output
+  if [[ "$data_hybrid" == true ]]; then
+    check_app_credentials
+    docker_args+=(
+      -e GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json
+      -v "$HOME/.config/gcloud/application_default_credentials.json:/gcp/creds.json:ro"
+    )
+  else
+    docker_args+=(-v "$OUTPUT_DIR:$OUTPUT_DIR")
+  fi
+
+# 4. Conditionally add update mode flag 
+  if [[ "$SCHEMA_UPDATE" == true ]]; then
+    docker_args+=(-e DATA_UPDATE_MODE=schemaupdate)
+  fi
+  
+# 7. Execute the Docker command
+  docker run "${docker_args[@]}" "gcr.io/datcom-ci/datacommons-data:stable"
+}
+
+# Run service container
+run_service() {
+
+  # 0. Check if there is an already running container on port 8080 and kill it
+  check_docker
+
+  # 1. Set IMAGE variable, construct and print output message
+
+  local message
+
+  if [ -n "$IMAGE" ]; then
+    message="Starting Docker services container with custom image '${IMAGE}'"
+  else
+    message="Starting Docker services container with stable release"
+    IMAGE="gcr.io/datcom-ci/datacommons-services:stable"
+  fi
+
+  if [[ "$service_hybrid" == true ]]; then
+    message+=" with data in Google Cloud"
+  fi
+  
+  if [[ "$instructions_hybrid" == true ]]; then
+    message+=" and custom instruction files in Google Cloud"
+  fi
+  message+="..."
+
+  log_notice "$message"
+
+ # 3. Define base Docker arguments shared by all modes
+  local docker_args=(
+    -it
+    --env-file "$ENV_FILE"
+    -p 8080:8080
+    -e DEBUG=true
+    -v "$PWD/server/templates/custom_dc/$FLASK_ENV:/workspace/server/templates/custom_dc/$FLASK_ENV"
+    -v "$PWD/static/custom_dc/$FLASK_ENV:/workspace/static/custom_dc/$FLASK_ENV"
+  )
+
+  # 4. Conditionally add GCP Credentials (needed if data OR instructions are remote)
+  if [[ "$service_hybrid" == true || "$instructions_hybrid" == true ]]; then
+    check_app_credentials
+    docker_args+=(
+      -e GOOGLE_APPLICATION_CREDENTIALS=/gcp/creds.json
+      -v "$HOME/.config/gcloud/application_default_credentials.json:/gcp/creds.json:ro"
+    )
+  fi
+
+  # 5. Conditionally mount input/output directories (local data)
+  if [[ "$service_hybrid" != true ]]; then
+    docker_args+=(
+      -v "$INPUT_DIR:$INPUT_DIR"
+      -v "$OUTPUT_DIR:$OUTPUT_DIR"
+    )
+  fi
+
+  # 6. Conditionally mount custom MCP instructions directory (local instructions)
+  if [[ "$instructions_hybrid" != true ]]; then
+    docker_args+=( -v "$DC_INSTRUCTIONS_DIR:$DC_INSTRUCTIONS_DIR" )
+  fi
+
+  # 7. Execute the Docker command
+  docker run "${docker_args[@]}" "$IMAGE"
+}
+
+# Convenience function for killing already running Docker container
+check_docker(){
+  container_id=$(docker ps -qf "publish=8080")
+    if [ -n "$container_id" ]; then
+      log_notice "A container is already running on port 8080. Stopping and removing the container..."
+      docker kill $container_id
+    fi
+}
+
+# Functions for checking GCP credentials
+############################################################
+
+# Check application default credentials. Needed for hybrid setups and docker tag/push.
+check_app_credentials() {
+  log_notice "Checking for valid Cloud application default credentials..."
+  # Attempt to print the access token
+  gcloud auth application-default print-access-token > /dev/null
+  exit_status=$?
+  if [ ${exit_status} -eq 0 ]; then
+    log_notice "GCP application default credentials are valid."
+    return 0
+    # If they're not, the gcloud auth application-default login program will take over
+  fi
+}
+
+# Get credentials to authenticate Docker to GCP. Needed for docker tag
+get_docker_credentials() {
+  log_notice "Getting credentials for Cloud Docker package..."
+  gcloud auth configure-docker ${GOOGLE_CLOUD_REGION}-docker.pkg.dev
+  exit_status=$?
+  if [ ${exit_status} -eq 0 ]; then
+    return 0
+  fi
+}
+
+# Check the user's/service account's credentials to authorize
+# gcloud to access GCP. Needed for docker push.
+check_gcloud_credentials() {
+  log_notice "Checking for valid gcloud credentials..."
+  # Attempt to print the identity token 
+  gcloud auth print-identity-token > /dev/null
+  exit_status=$?
+  if [ ${exit_status} -eq 0 ]; then
+    log_notice "gcloud credentials are valid."
+    return 0
+    # If they're not, the gcloud auth login program will take over
+  fi
+}
+
+# Begin execution 
+#######################################################
+
+# Initialize variables for optional settings
+ENV_FILE="$PWD/custom_dc/env.list"
+ACTIONS="run"
+CONTAINER="all"
+SCHEMA_UPDATE=false
+IMAGE=""
+PACKAGE=""
+
+# Helper to parse arguments (handles both --opt=val and --opt val)
+# Echoes "value|shift_count" to stdout
+#
+# IMPORTANT: This function is ONLY for options that REQUIRE a value.
+# Do NOT use this for boolean flags (like -d or -h). If you do, it will 
+# incorrectly attempt to consume the next argument as a value.
+#
+# Arguments:
+#   $1: current_arg (the flag being parsed, e.g. "-e" or "--env_file=foo")
+#   $2: next_arg (the argument following the flag in the command line)
+#   $3: remaining_count (total number of arguments remaining in "$@")
+#
+# Logic:
+#   - If current_arg contains '=', value is extracted from it. shift_count is 1.
+#   - If not, it checks if next_arg exists and is NOT a flag (doesn't start with -).
+#     If valid, value is next_arg and shift_count is 2.
+#   - If next_arg is missing or is another flag, exits with error.
+parse_arg() {
+  local current_arg="$1"
+  local next_arg="$2"
+  local remaining_count="$3"
+  local val
+  local shift_count
+
+  if [[ "$current_arg" == *"="* ]]; then
+    val="${current_arg#*=}"
+    shift_count=1
+  else
+    if [[ $remaining_count -lt 2 || "$next_arg" == -* ]]; then
+      log_error "Option $current_arg requires an argument."
+      exit 1
+    fi
+    val="$next_arg"
+    shift_count=2
+  fi
+  echo "$val|$shift_count"
+}
+
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -e | --env_file | --env_file=*)
+      parsed=$(parse_arg "$1" "$2" "$#")
+      val="${parsed%|*}"
+      shift_count="${parsed#*|}"
+      shift $shift_count
+      
+      if [ -f "$val" ]; then
+        ENV_FILE="$val"
+      else
+        log_error "Error parsing --env_file: File '$val' does not exist.\nPlease specify a valid path and file name."
+        exit 1
+      fi
+      ;;
+    -a | --actions | --actions=*)
+      parsed=$(parse_arg "$1" "$2" "$#")
+      val="${parsed%|*}"
+      shift_count="${parsed#*|}"
+      shift $shift_count
+
+      if [[ "$val" =~ ^(run|build|build_run|build_upload|upload)$ ]]; then
+        ACTIONS="$val"
+      else
+        log_error "That is not a valid action. Valid options are:\nrun\nbuild\nbuild_run\nbuild_upload\nupload\n"
+        exit 1
+      fi
+      ;;
+    -c | --container | --container=*)
+      parsed=$(parse_arg "$1" "$2" "$#")
+      val="${parsed%|*}"
+      shift_count="${parsed#*|}"
+      shift $shift_count
+
+      if [[ "$val" =~ ^(all|service|data)$ ]]; then
+        CONTAINER="$val"
+      else
+        log_error "That is not a valid container option. Valid options are 'all' or 'service' or 'data'\n"
+        exit 1
+      fi
+      ;;
+    -i | --image | --image=*)
+      parsed=$(parse_arg "$1" "$2" "$#")
+      val="${parsed%|*}"
+      shift_count="${parsed#*|}"
+      shift $shift_count
+      IMAGE="$val"
+      ;;
+    -s | --schema_update)
+      SCHEMA_UPDATE=true
+      shift
+      ;;
+    -p | --package | --package=*)
+      parsed=$(parse_arg "$1" "$2" "$#")
+      val="${parsed%|*}"
+      shift_count="${parsed#*|}"
+      shift $shift_count
+      PACKAGE="$val"
+      ;;
+    -h | --help)
+      help
+      exit 0
+      ;;
+    -d | --debug)
+      set -x
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      log_error "Invalid input: $1"
+      log_error "Please try again. See '--help' for correct usage."
+      exit 1
+      ;;
+  esac
+done
+
+# Get options from the selected env.list file
+source "$ENV_FILE"
+
+# Set variables for hybrid modes
+#----------------------------------------------------
+# Determine hybrid mode and set a variable to true for use throughout the script
+
+if [[ "$DC_INSTRUCTIONS_DIR" == *"gs://"* ]]; then
+  instructions_hybrid=true
+fi
+
+if [[ "$INPUT_DIR" == *"gs://"* ]] && [[ "$OUTPUT_DIR" == *"gs://"* ]]; then
+  service_hybrid=true
+elif [[ "$INPUT_DIR" != *"gs://"* ]] && [[ "$OUTPUT_DIR" == *"gs://"* ]]; then
+  data_hybrid=true
+elif [[ "$INPUT_DIR" == *"gs://"* ]] && [[ "$OUTPUT_DIR" != *"gs://"* ]]; then
+  log_error "Invalid data directory settings in env.list file. Please set your OUTPUT_DIR to a Cloud Path or your INPUT_DIR to a local path.\n"
+  exit 1
+fi
+
+# Handle various error conditions
+#######################################################
+
+# Missing variables needed to construct Docker commands
+#============================================================
+# Missing variables in env.list file
+#-------------------------------------------------------------
+# Needed for docker run -v option
+if [ -z "$INPUT_DIR" ] || [ -z "$OUTPUT_DIR" ]; then
+  log_error "Missing input or output data directories.\nPlease set 'INPUT_DIR' and 'OUTPUT_DIR' in your env.list file.\n"
+  exit 1
+fi
+
+# Needed for docker tag and push
+if  [[ ( "$ACTIONS" == *"upload"* ) && ( -z "$GOOGLE_CLOUD_PROJECT" || -z "$GOOGLE_CLOUD_REGION" )]]; then
+  log_error "Missing GCP project and region settings.\nPlease set 'GOOGLE_CLOUD_PROJECT' and/or 'GOOGLE_CLOUD_REGION' in your env.list file.\n"
+  exit 1
+fi
+
+# Missing variables from input
+#-------------------------------------------------------------
+# Missing required custom image for build and upload
+if [ "$ACTIONS" != "run" ] && [ -z "$IMAGE" ]; then
+  log_error "Missing an image name and tag for build and/or upload.\nPlease use the -'-image' or '-i' option with the name and tag of the custom image you are building or have already built.\n"
+  exit 1
+fi
+
+# Missing package for upload; not an error, just info
+if [[ "$ACTIONS" == *"upload"* ]] && [ -z "$PACKAGE" ]; then
+  log_notice "No '--package' option specified."
+  log_notice "The target image will use the same name and tag as the source image '$IMAGE'.\n"
+  sleep 3
+  # Assign image name
+  PACKAGE=$IMAGE
+fi
+
+# Handle invalid option combinations and reset to valid (most are silently 
+# ignored and handled by the case statement)
+#--------------------------------------------------------------------
+if [ "$data_hybrid" == true ]; then
+  ACTIONS="run"
+  CONTAINER="data"
+elif [ "$SCHEMA_UPDATE" == true ]; then
+  CONTAINER="all"
+fi  
+
+if [ "$service_hybrid" == true ]; then
+  if [ "$ACTIONS" != "run" ] &&  [ "$ACTIONS" != "build_run" ]; then
+    log_error "Invalid action for running in "hybrid" service mode.\n Valid options are 'run' or 'build_run'.\n"
+    exit 1
+  fi
+  CONTAINER="service"
+fi  
+
+# Call Docker commands
+######################################
+case "$ACTIONS" in
+  "build")
+    build
+    ;;
+  "build_run")
+    build
+    if [ "$CONTAINER" == "service" ]; then
+      run_service
+    else
+      run_data
+      run_service
+    fi   
+    ;;
+  "upload")
+    upload
+    ;;
+  "build_upload")
+    build
+    upload
+    ;;
+  "run")
+    if [ "$CONTAINER" == "service" ]; then
+      run_service
+    elif [ "$CONTAINER" == "data" ]; then
+      run_data
+    else
+      run_data
+      run_service
+    fi
+    ;;
+esac
+
+exit 0

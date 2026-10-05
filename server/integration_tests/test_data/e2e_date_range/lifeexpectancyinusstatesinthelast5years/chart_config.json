@@ -1,0 +1,1428 @@
+{
+  "client": "test_detect-and-fulfill",
+  "config": {
+    "categories": [
+      {
+        "blocks": [
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "LifeExpectancy_Person_8027911949465806975"
+                    ],
+                    "title": "Life Expectancy in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Life Expectancy in United States",
+                    "statVarKey": [
+                      "LifeExpectancy_Person"
+                    ],
+                    "title": "Life Expectancy in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Life Expectancy"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "LifeExpectancy_Person_Female_9841531598146992798",
+                      "LifeExpectancy_Person_Male_9841531598146992798"
+                    ],
+                    "title": "Life Expectancy by Gender in United States",
+                    "type": "LINE"
+                  }
+                ]
+              }
+            ],
+            "title": "Life Expectancy by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Death"
+                    ],
+                    "title": "Number of Deaths in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Count_Death"
+                    ],
+                    "title": "Number of Deaths in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Number of Deaths in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Count_Death_4486658077301201845"
+                    ],
+                    "title": "Number of Deaths in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Number of Deaths in United States",
+                    "statVarKey": [
+                      "Count_Death"
+                    ],
+                    "title": "Number of Deaths in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Number of Deaths"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Count_Death_AsAFractionOfCount_Person_14219717798868772133"
+                    ],
+                    "title": "Deaths Per Capita in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Deaths Per Capita in United States",
+                    "statVarKey": [
+                      "Count_Death_AsAFractionOfCount_Person"
+                    ],
+                    "title": "Deaths Per Capita in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Deaths Per Capita"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person_530950429473454944"
+                    ],
+                    "title": "Suicide Mortality Rate in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Suicide Mortality Rate in United States",
+                    "statVarKey": [
+                      "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person"
+                    ],
+                    "title": "Suicide Mortality Rate in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Causes of Death"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "sdg/SH_DYN_NMRT.AGE--M0_13678236933566447286"
+                    ],
+                    "title": "Neonatal Mortality Rate in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Neonatal Mortality Rate in United States",
+                    "statVarKey": [
+                      "sdg/SH_DYN_NMRT.AGE--M0"
+                    ],
+                    "title": "Neonatal Mortality Rate in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "footnote": "Includes data from the following sources: united nations Inter-agency group for child mortality estimation (UN IGME), 2024.",
+            "title": "Neonatal Mortality Rate"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Count_Death_Upto1Years_4486658077301201845"
+                    ],
+                    "title": "Count of Mortality Event: Years Upto 1 in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Count of Mortality Event: Years Upto 1 in United States",
+                    "statVarKey": [
+                      "Count_Death_Upto1Years"
+                    ],
+                    "title": "Count of Mortality Event: Years Upto 1 in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Count of Mortality Event: Years Upto 1"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "sdg/SH_DYN_IMRT.AGE--Y0__SEX--F_13678236933566447286",
+                      "sdg/SH_DYN_IMRT.AGE--Y0__SEX--M_13678236933566447286"
+                    ],
+                    "title": "Infant Mortality Rate by Gender in United States",
+                    "type": "LINE"
+                  }
+                ]
+              }
+            ],
+            "title": "Infant Mortality Rate by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Mean_IntervalSinceLastBirth_BirthEvent_LiveBirth"
+                    ],
+                    "title": "Average Interval in Months Since Last Live Birth in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Mean_IntervalSinceLastBirth_BirthEvent_LiveBirth"
+                    ],
+                    "title": "Average Interval in Months Since Last Live Birth in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Average Interval in Months Since Last Live Birth in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person_Male"
+                    ],
+                    "title": "Men's Median Age in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male"
+                    ],
+                    "title": "Men's Median Age in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Men's Median Age in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male_2550419630908544036"
+                    ],
+                    "title": "Men's Median Age in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Men's Median Age in United States",
+                    "statVarKey": [
+                      "Median_Age_Person_Male"
+                    ],
+                    "title": "Men's Median Age in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Men's Median Age"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person"
+                    ],
+                    "title": "Median Age of Population in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person"
+                    ],
+                    "title": "Median Age of Population in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "description": "The median age of people in a population.",
+            "title": "Median Age of Population in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_2550419630908544036"
+                    ],
+                    "title": "Median Age of Population in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Median Age of Population in United States",
+                    "statVarKey": [
+                      "Median_Age_Person"
+                    ],
+                    "title": "Median Age of Population in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "The median age of people in a population.",
+            "title": "Median Age of Population"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person_5660793366985337682"
+                    ],
+                    "title": "Crude Birth Rate in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Crude Birth Rate in United States",
+                    "statVarKey": [
+                      "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person"
+                    ],
+                    "title": "Crude Birth Rate in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "Crude birth rate indicates the number of live births occurring during the year, per 1,000 population estimated at midyear. Subtracting the crude death rate from the crude birth rate provides the rate of natural increase, which is equal to the rate of population change in the absence of migration. (1) united nations population division. World population prospects: 2019 revision. (2) census reports and other statistical publications from national statistical offices, (3) eurostat: demographic statistics, (4) united nations statistical division. Population and vital statistics report (various years), (5) u.S. Census bureau: international database, and (6) secretariat of the pacific community: statistics and demography programme.",
+            "title": "Crude Birth Rate"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person_Female"
+                    ],
+                    "title": "Women's Median Age in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Female"
+                    ],
+                    "title": "Women's Median Age in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Women's Median Age in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Female_2550419630908544036"
+                    ],
+                    "title": "Women's Median Age in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Women's Median Age in United States",
+                    "statVarKey": [
+                      "Median_Age_Person_Female"
+                    ],
+                    "title": "Women's Median Age in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Women's Median Age"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person_Male_Native"
+                    ],
+                    "title": "Median Age of Men Born in the United States in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male_Native"
+                    ],
+                    "title": "Median Age of Men Born in the United States in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of Men Born in the United States in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male_Native_5861401611713998024"
+                    ],
+                    "title": "Median Age of Men Born in the United States in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Median Age of Men Born in the United States in United States",
+                    "statVarKey": [
+                      "Median_Age_Person_Male_Native"
+                    ],
+                    "title": "Median Age of Men Born in the United States in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of Men Born in the United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person_Native"
+                    ],
+                    "title": "Median Age of Person: USC Native in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Native"
+                    ],
+                    "title": "Median Age of Person: USC Native in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of Person: USC Native in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Native_5861401611713998024"
+                    ],
+                    "title": "Median Age of Person: USC Native in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Median Age of Person: USC Native in United States",
+                    "statVarKey": [
+                      "Median_Age_Person_Native"
+                    ],
+                    "title": "Median Age of Person: USC Native in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of Person: USC Native"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Median_Age_Person_Male_WhiteAlone"
+                    ],
+                    "title": "Median Age of White Men in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male_WhiteAlone"
+                    ],
+                    "title": "Median Age of White Men in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of White Men in States of United States"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "startDate": "2021"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Male_WhiteAlone_5861401611713998024"
+                    ],
+                    "title": "Median Age of White Men in United States",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Median Age of White Men in United States",
+                    "statVarKey": [
+                      "Median_Age_Person_Male_WhiteAlone"
+                    ],
+                    "title": "Median Age of White Men in United States",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Median Age of White Men"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Mean_MothersAge_BirthEvent_LiveBirth"
+                    ],
+                    "title": "Average Mother'S Age in Years in States of United States (${date})",
+                    "type": "MAP"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Mean_MothersAge_BirthEvent_LiveBirth"
+                    ],
+                    "title": "Average Mother'S Age in Years in States of United States (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "title": "Average Mother'S Age in Years in States of United States"
+          }
+        ],
+        "statVarSpec": {
+          "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person": {
+            "name": "Crude Birth Rate",
+            "statVar": "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person"
+          },
+          "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person_5660793366985337682": {
+            "facetId": "5660793366985337682",
+            "name": "Crude Birth Rate",
+            "statVar": "Count_BirthEvent_LiveBirth_AsFractionOf_Count_Person"
+          },
+          "Count_Death": {
+            "name": "Number of Deaths",
+            "statVar": "Count_Death"
+          },
+          "Count_Death_4486658077301201845": {
+            "facetId": "4486658077301201845",
+            "name": "Number of Deaths",
+            "statVar": "Count_Death"
+          },
+          "Count_Death_AsAFractionOfCount_Person": {
+            "name": "Deaths Per Capita",
+            "statVar": "Count_Death_AsAFractionOfCount_Person"
+          },
+          "Count_Death_AsAFractionOfCount_Person_14219717798868772133": {
+            "facetId": "14219717798868772133",
+            "name": "Deaths Per Capita",
+            "statVar": "Count_Death_AsAFractionOfCount_Person"
+          },
+          "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person": {
+            "name": "Suicide Mortality Rate",
+            "statVar": "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person"
+          },
+          "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person_530950429473454944": {
+            "facetId": "530950429473454944",
+            "name": "Suicide Mortality Rate",
+            "statVar": "Count_Death_IntentionalSelfHarm_AsFractionOf_Count_Person"
+          },
+          "Count_Death_Upto1Years": {
+            "name": "Count of Mortality Event: Years Upto 1",
+            "statVar": "Count_Death_Upto1Years"
+          },
+          "Count_Death_Upto1Years_4486658077301201845": {
+            "facetId": "4486658077301201845",
+            "name": "Count of Mortality Event: Years Upto 1",
+            "statVar": "Count_Death_Upto1Years"
+          },
+          "LifeExpectancy_Person": {
+            "name": "Life Expectancy",
+            "statVar": "LifeExpectancy_Person"
+          },
+          "LifeExpectancy_Person_8027911949465806975": {
+            "facetId": "8027911949465806975",
+            "name": "Life Expectancy",
+            "statVar": "LifeExpectancy_Person"
+          },
+          "LifeExpectancy_Person_Female_9841531598146992798": {
+            "facetId": "9841531598146992798",
+            "name": "Female Life Expectancy",
+            "statVar": "LifeExpectancy_Person_Female"
+          },
+          "LifeExpectancy_Person_Male_9841531598146992798": {
+            "facetId": "9841531598146992798",
+            "name": "Male Life Expectancy",
+            "statVar": "LifeExpectancy_Person_Male"
+          },
+          "Mean_IntervalSinceLastBirth_BirthEvent_LiveBirth": {
+            "name": "Average interval in months since last live birth",
+            "statVar": "Mean_IntervalSinceLastBirth_BirthEvent_LiveBirth"
+          },
+          "Mean_MothersAge_BirthEvent_LiveBirth": {
+            "name": "Average mother's age in years",
+            "statVar": "Mean_MothersAge_BirthEvent_LiveBirth"
+          },
+          "Median_Age_Person": {
+            "name": "Median Age of Population",
+            "statVar": "Median_Age_Person"
+          },
+          "Median_Age_Person_2550419630908544036": {
+            "facetId": "2550419630908544036",
+            "name": "Median Age of Population",
+            "statVar": "Median_Age_Person"
+          },
+          "Median_Age_Person_Female": {
+            "name": "Women's Median Age",
+            "statVar": "Median_Age_Person_Female"
+          },
+          "Median_Age_Person_Female_2550419630908544036": {
+            "facetId": "2550419630908544036",
+            "name": "Women's Median Age",
+            "statVar": "Median_Age_Person_Female"
+          },
+          "Median_Age_Person_Male": {
+            "name": "Men's Median Age",
+            "statVar": "Median_Age_Person_Male"
+          },
+          "Median_Age_Person_Male_2550419630908544036": {
+            "facetId": "2550419630908544036",
+            "name": "Men's Median Age",
+            "statVar": "Median_Age_Person_Male"
+          },
+          "Median_Age_Person_Male_Native": {
+            "name": "Median Age of Men Born in the United States",
+            "statVar": "Median_Age_Person_Male_Native"
+          },
+          "Median_Age_Person_Male_Native_5861401611713998024": {
+            "facetId": "5861401611713998024",
+            "name": "Median Age of Men Born in the United States",
+            "statVar": "Median_Age_Person_Male_Native"
+          },
+          "Median_Age_Person_Male_WhiteAlone": {
+            "name": "Median Age of White Men",
+            "statVar": "Median_Age_Person_Male_WhiteAlone"
+          },
+          "Median_Age_Person_Male_WhiteAlone_5861401611713998024": {
+            "facetId": "5861401611713998024",
+            "name": "Median Age of White Men",
+            "statVar": "Median_Age_Person_Male_WhiteAlone"
+          },
+          "Median_Age_Person_Native": {
+            "name": "Median Age of Person: USC Native",
+            "statVar": "Median_Age_Person_Native"
+          },
+          "Median_Age_Person_Native_5861401611713998024": {
+            "facetId": "5861401611713998024",
+            "name": "Median Age of Person: USC Native",
+            "statVar": "Median_Age_Person_Native"
+          },
+          "sdg/SH_DYN_IMRT.AGE--Y0__SEX--F_13678236933566447286": {
+            "facetId": "13678236933566447286",
+            "name": "Infant mortality rate",
+            "statVar": "sdg/SH_DYN_IMRT.AGE--Y0__SEX--F"
+          },
+          "sdg/SH_DYN_IMRT.AGE--Y0__SEX--M_13678236933566447286": {
+            "facetId": "13678236933566447286",
+            "name": "Infant mortality rate [under 1 year old, Male]",
+            "statVar": "sdg/SH_DYN_IMRT.AGE--Y0__SEX--M"
+          },
+          "sdg/SH_DYN_NMRT.AGE--M0": {
+            "name": "Neonatal mortality rate",
+            "statVar": "sdg/SH_DYN_NMRT.AGE--M0"
+          },
+          "sdg/SH_DYN_NMRT.AGE--M0_13678236933566447286": {
+            "facetId": "13678236933566447286",
+            "name": "Neonatal mortality rate",
+            "statVar": "sdg/SH_DYN_NMRT.AGE--M0"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "containedPlaceTypes": {
+        "Country": "State"
+      },
+      "placeDcid": [
+        "country/USA"
+      ]
+    }
+  },
+  "context": {},
+  "debug": {},
+  "entities": [],
+  "pastSourceContext": "",
+  "place": {
+    "dcid": "country/USA",
+    "name": "United States",
+    "place_type": "Country"
+  },
+  "placeFallback": {},
+  "placeSource": "CURRENT_QUERY",
+  "places": [
+    {
+      "dcid": "country/USA",
+      "name": "United States",
+      "place_type": "Country"
+    }
+  ],
+  "relatedThings": {
+    "childPlaces": {
+      "State": [
+        {
+          "dcid": "geoId/01",
+          "name": "Alabama",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/02",
+          "name": "Alaska",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/04",
+          "name": "Arizona",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/05",
+          "name": "Arkansas",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/06",
+          "name": "California",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/08",
+          "name": "Colorado",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/09",
+          "name": "Connecticut",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/10",
+          "name": "Delaware",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/11",
+          "name": "District of Columbia",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/12",
+          "name": "Florida",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/13",
+          "name": "Georgia",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/15",
+          "name": "Hawaii",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/16",
+          "name": "Idaho",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/17",
+          "name": "Illinois",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/18",
+          "name": "Indiana",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/19",
+          "name": "Iowa",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/20",
+          "name": "Kansas",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/21",
+          "name": "Kentucky",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/22",
+          "name": "Louisiana",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/23",
+          "name": "Maine",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/24",
+          "name": "Maryland",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/25",
+          "name": "Massachusetts",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/26",
+          "name": "Michigan",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/27",
+          "name": "Minnesota",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/28",
+          "name": "Mississippi",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/29",
+          "name": "Missouri",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/30",
+          "name": "Montana",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/31",
+          "name": "Nebraska",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/32",
+          "name": "Nevada",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/33",
+          "name": "New Hampshire",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/34",
+          "name": "New Jersey",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/35",
+          "name": "New Mexico",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/36",
+          "name": "New York",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/37",
+          "name": "North Carolina",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/38",
+          "name": "North Dakota",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/39",
+          "name": "Ohio",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/40",
+          "name": "Oklahoma",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/41",
+          "name": "Oregon",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/42",
+          "name": "Pennsylvania",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/44",
+          "name": "Rhode Island",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/45",
+          "name": "South Carolina",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/46",
+          "name": "South Dakota",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/47",
+          "name": "Tennessee",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/48",
+          "name": "Texas",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/49",
+          "name": "Utah",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/50",
+          "name": "Vermont",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/51",
+          "name": "Virginia",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/53",
+          "name": "Washington",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/54",
+          "name": "West Virginia",
+          "types": [
+            "State"
+          ]
+        },
+        {
+          "dcid": "geoId/55",
+          "name": "Wisconsin",
+          "types": [
+            "State"
+          ]
+        }
+      ]
+    },
+    "childTopics": [],
+    "exploreMore": {
+      "LifeExpectancy_Person": {
+        "gender": [
+          "LifeExpectancy_Person_Female",
+          "LifeExpectancy_Person_Male"
+        ]
+      },
+      "Median_Age_Person": {
+        "gender": [
+          "Median_Age_Person_Female",
+          "Median_Age_Person_Male"
+        ]
+      }
+    },
+    "mainTopics": [
+      {
+        "dcid": "dc/topic/LifeExpectancy",
+        "name": "Life Expectancy",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "parentPlaces": [],
+    "parentTopics": [
+      {
+        "dcid": "dc/topic/Mortality",
+        "name": "Mortality",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "peerPlaces": [
+      {
+        "dcid": "country/BRA",
+        "name": "Brazil",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/CAN",
+        "name": "Canada",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/CHN",
+        "name": "China",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/EGY",
+        "name": "Egypt",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/FRA",
+        "name": "France",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/DEU",
+        "name": "Germany",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/IND",
+        "name": "India",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/JPN",
+        "name": "Japan",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/MYS",
+        "name": "Malaysia",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/NZL",
+        "name": "New Zealand",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/NGA",
+        "name": "Nigeria",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/PER",
+        "name": "Peru",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/RUS",
+        "name": "Russia",
+        "types": [
+          "Country"
+        ]
+      },
+      {
+        "dcid": "country/GBR",
+        "name": "United Kingdom",
+        "types": [
+          "Country"
+        ]
+      }
+    ],
+    "peerTopics": [
+      {
+        "dcid": "dc/topic/CausesOfDeath",
+        "name": "Causes of Death",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/FemaleMortality",
+        "name": "Female Mortality",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/InfantMortality",
+        "name": "Infant Mortality",
+        "types": [
+          "Topic"
+        ]
+      }
+    ]
+  },
+  "svSource": "CURRENT_QUERY",
+  "userMessages": []
+}

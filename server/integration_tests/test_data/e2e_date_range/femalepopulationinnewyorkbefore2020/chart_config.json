@@ -1,0 +1,1105 @@
+{
+  "client": "test_detect-and-fulfill",
+  "config": {
+    "categories": [
+      {
+        "blocks": [
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_16559184819460950966",
+                      "Count_Person_Male_16559184819460950966"
+                    ],
+                    "title": "Population by Gender in New York",
+                    "type": "LINE"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_WhiteAlone_10169881228856630405"
+                    ],
+                    "title": "Women Identifying as White Alone in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Women Identifying as White Alone in New York",
+                    "statVarKey": [
+                      "Count_Person_Female_WhiteAlone_2019"
+                    ],
+                    "title": "Women Identifying as White Alone in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Women Identifying as White Alone"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_15To19Years_Female_Separated_6188132829030295600"
+                    ],
+                    "title": "Population: Years 15 to 19, Female, Separated in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Years 15 to 19, Female, Separated in New York",
+                    "statVarKey": [
+                      "Count_Person_15To19Years_Female_Separated_2019"
+                    ],
+                    "title": "Population: Years 15 to 19, Female, Separated in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Separated Female Population by Age"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_AsianAlone_10169881228856630405"
+                    ],
+                    "title": "Asian Monoracial Women in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Asian Monoracial Women in New York",
+                    "statVarKey": [
+                      "Count_Person_Female_AsianAlone_2019"
+                    ],
+                    "title": "Asian Monoracial Women in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Asian Monoracial Women"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_MarriedAndNotSeparated_6188132829030295600"
+                    ],
+                    "title": "Non-Separated Married Women in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Non-Separated Married Women in New York",
+                    "statVarKey": [
+                      "Count_Person_Female_MarriedAndNotSeparated_2019"
+                    ],
+                    "title": "Non-Separated Married Women in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Non-Separated Married Women"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_HispanicOrLatino_10169881228856630405"
+                    ],
+                    "title": "Hispanic Women in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Hispanic Women in New York",
+                    "statVarKey": [
+                      "Count_Person_Female_HispanicOrLatino_2019"
+                    ],
+                    "title": "Hispanic Women in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Hispanic Women"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Median_Age_Person_Female_2550419630908544036"
+                    ],
+                    "title": "Women's Median Age in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Women's Median Age in New York",
+                    "statVarKey": [
+                      "Median_Age_Person_Female_2019"
+                    ],
+                    "title": "Women's Median Age in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Women's Median Age"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female_BlackOrAfricanAmericanAlone_10169881228856630405"
+                    ],
+                    "title": "Black or African American Monoracial Women in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Black or African American Monoracial Women in New York",
+                    "statVarKey": [
+                      "Count_Person_Female_BlackOrAfricanAmericanAlone_2019"
+                    ],
+                    "title": "Black or African American Monoracial Women in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Black or African American Monoracial Women"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_3OrMoreYears_Female_EnrolledInSchool_10169881228856630405"
+                    ],
+                    "title": "Population: Years 3 Onwards, Female, Enrolled in School in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Years 3 Onwards, Female, Enrolled in School in New York",
+                    "statVarKey": [
+                      "Count_Person_3OrMoreYears_Female_EnrolledInSchool_2019"
+                    ],
+                    "title": "Population: Years 3 Onwards, Female, Enrolled in School in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Years 3 Onwards, Female, Enrolled in School"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_WithOwnChildrenUnder18_Female_9057536153401597385"
+                    ],
+                    "title": "Population: With Own Children Under 18, Female in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: With Own Children Under 18, Female in New York",
+                    "statVarKey": [
+                      "Count_Person_WithOwnChildrenUnder18_Female_2019"
+                    ],
+                    "title": "Population: With Own Children Under 18, Female in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: With Own Children Under 18, Female"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female_9879717220170227367"
+                    ],
+                    "title": "Population: Years 25 Onwards, Bachelors Degree or Higher, Female in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Years 25 Onwards, Bachelors Degree or Higher, Female in New York",
+                    "statVarKey": [
+                      "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female_2019"
+                    ],
+                    "title": "Population: Years 25 Onwards, Bachelors Degree or Higher, Female in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Years 25 Onwards, Bachelors Degree or Higher, Female"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_Civilian_Female_NonInstitutionalized_10169881228856630405"
+                    ],
+                    "title": "Women Non Institutionalized in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Women Non Institutionalized in New York",
+                    "statVarKey": [
+                      "Count_Person_Civilian_Female_NonInstitutionalized_2019"
+                    ],
+                    "title": "Women Non Institutionalized in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Women Non Institutionalized"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_85OrMoreYears_Female_16559184819460950966"
+                    ],
+                    "title": "Women Over 85 in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Women Over 85 in New York",
+                    "statVarKey": [
+                      "Count_Person_85OrMoreYears_Female_2019"
+                    ],
+                    "title": "Women Over 85 in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Women Over 85"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_8912910856362438925"
+                    ],
+                    "title": "Population in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population in New York",
+                    "statVarKey": [
+                      "Count_Person_2019"
+                    ],
+                    "title": "Population in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "The total number of people in a population.",
+            "title": "Population"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "lineTileSpec": {
+                      "endDate": "2019"
+                    },
+                    "statVarKey": [
+                      "Count_Person_16OrMoreYears_Female_WithEarnings_10221448756907153750"
+                    ],
+                    "title": "Population: Years 16 Onwards, Female, With Earnings in New York",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Years 16 Onwards, Female, With Earnings in New York",
+                    "statVarKey": [
+                      "Count_Person_16OrMoreYears_Female_WithEarnings_2019"
+                    ],
+                    "title": "Population: Years 16 Onwards, Female, With Earnings in New York",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Years 16 Onwards, Female, With Earnings"
+          }
+        ],
+        "statVarSpec": {
+          "Count_Person_15To19Years_Female_Separated_2019": {
+            "date": "2019",
+            "name": "Population: Years 15 To 19, Female, Separated",
+            "statVar": "Count_Person_15To19Years_Female_Separated"
+          },
+          "Count_Person_15To19Years_Female_Separated_6188132829030295600": {
+            "facetId": "6188132829030295600",
+            "name": "Population: Years 15 To 19, Female, Separated",
+            "statVar": "Count_Person_15To19Years_Female_Separated"
+          },
+          "Count_Person_16OrMoreYears_Female_WithEarnings_10221448756907153750": {
+            "facetId": "10221448756907153750",
+            "name": "Population: Years 16 Onwards, Female, With Earnings",
+            "statVar": "Count_Person_16OrMoreYears_Female_WithEarnings"
+          },
+          "Count_Person_16OrMoreYears_Female_WithEarnings_2019": {
+            "date": "2019",
+            "name": "Population: Years 16 Onwards, Female, With Earnings",
+            "statVar": "Count_Person_16OrMoreYears_Female_WithEarnings"
+          },
+          "Count_Person_2019": {
+            "date": "2019",
+            "name": "Population",
+            "statVar": "Count_Person"
+          },
+          "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female_2019": {
+            "date": "2019",
+            "name": "Population: Years 25 Onwards, Bachelors Degree Or Higher, Female",
+            "statVar": "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female"
+          },
+          "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female_9879717220170227367": {
+            "facetId": "9879717220170227367",
+            "name": "Population: Years 25 Onwards, Bachelors Degree Or Higher, Female",
+            "statVar": "Count_Person_25OrMoreYears_EducationalAttainmentBachelorsDegreeOrHigher_Female"
+          },
+          "Count_Person_3OrMoreYears_Female_EnrolledInSchool_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Population: Years 3 Onwards, Female, Enrolled In School",
+            "statVar": "Count_Person_3OrMoreYears_Female_EnrolledInSchool"
+          },
+          "Count_Person_3OrMoreYears_Female_EnrolledInSchool_2019": {
+            "date": "2019",
+            "name": "Population: Years 3 Onwards, Female, Enrolled In School",
+            "statVar": "Count_Person_3OrMoreYears_Female_EnrolledInSchool"
+          },
+          "Count_Person_85OrMoreYears_Female_16559184819460950966": {
+            "facetId": "16559184819460950966",
+            "name": "Women over 85",
+            "statVar": "Count_Person_85OrMoreYears_Female"
+          },
+          "Count_Person_85OrMoreYears_Female_2019": {
+            "date": "2019",
+            "name": "Women over 85",
+            "statVar": "Count_Person_85OrMoreYears_Female"
+          },
+          "Count_Person_8912910856362438925": {
+            "facetId": "8912910856362438925",
+            "name": "Population",
+            "statVar": "Count_Person"
+          },
+          "Count_Person_Civilian_Female_NonInstitutionalized_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Women Non Institutionalized",
+            "statVar": "Count_Person_Civilian_Female_NonInstitutionalized"
+          },
+          "Count_Person_Civilian_Female_NonInstitutionalized_2019": {
+            "date": "2019",
+            "name": "Women Non Institutionalized",
+            "statVar": "Count_Person_Civilian_Female_NonInstitutionalized"
+          },
+          "Count_Person_Female_16559184819460950966": {
+            "facetId": "16559184819460950966",
+            "name": "Women",
+            "statVar": "Count_Person_Female"
+          },
+          "Count_Person_Female_AsianAlone_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Asian Monoracial Women",
+            "statVar": "Count_Person_Female_AsianAlone"
+          },
+          "Count_Person_Female_AsianAlone_2019": {
+            "date": "2019",
+            "name": "Asian Monoracial Women",
+            "statVar": "Count_Person_Female_AsianAlone"
+          },
+          "Count_Person_Female_BlackOrAfricanAmericanAlone_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Black or African American Monoracial Women",
+            "statVar": "Count_Person_Female_BlackOrAfricanAmericanAlone"
+          },
+          "Count_Person_Female_BlackOrAfricanAmericanAlone_2019": {
+            "date": "2019",
+            "name": "Black or African American Monoracial Women",
+            "statVar": "Count_Person_Female_BlackOrAfricanAmericanAlone"
+          },
+          "Count_Person_Female_HispanicOrLatino_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Hispanic Women",
+            "statVar": "Count_Person_Female_HispanicOrLatino"
+          },
+          "Count_Person_Female_HispanicOrLatino_2019": {
+            "date": "2019",
+            "name": "Hispanic Women",
+            "statVar": "Count_Person_Female_HispanicOrLatino"
+          },
+          "Count_Person_Female_MarriedAndNotSeparated_2019": {
+            "date": "2019",
+            "name": "Non-Separated Married Women",
+            "statVar": "Count_Person_Female_MarriedAndNotSeparated"
+          },
+          "Count_Person_Female_MarriedAndNotSeparated_6188132829030295600": {
+            "facetId": "6188132829030295600",
+            "name": "Non-Separated Married Women",
+            "statVar": "Count_Person_Female_MarriedAndNotSeparated"
+          },
+          "Count_Person_Female_WhiteAlone_10169881228856630405": {
+            "facetId": "10169881228856630405",
+            "name": "Women Identifying as White Alone",
+            "statVar": "Count_Person_Female_WhiteAlone"
+          },
+          "Count_Person_Female_WhiteAlone_2019": {
+            "date": "2019",
+            "name": "Women Identifying as White Alone",
+            "statVar": "Count_Person_Female_WhiteAlone"
+          },
+          "Count_Person_Male_16559184819460950966": {
+            "facetId": "16559184819460950966",
+            "name": "Men",
+            "statVar": "Count_Person_Male"
+          },
+          "Count_Person_WithOwnChildrenUnder18_Female_2019": {
+            "date": "2019",
+            "name": "Population: With Own Children Under 18, Female",
+            "statVar": "Count_Person_WithOwnChildrenUnder18_Female"
+          },
+          "Count_Person_WithOwnChildrenUnder18_Female_9057536153401597385": {
+            "facetId": "9057536153401597385",
+            "name": "Population: With Own Children Under 18, Female",
+            "statVar": "Count_Person_WithOwnChildrenUnder18_Female"
+          },
+          "Median_Age_Person_Female_2019": {
+            "date": "2019",
+            "name": "Women's Median Age",
+            "statVar": "Median_Age_Person_Female"
+          },
+          "Median_Age_Person_Female_2550419630908544036": {
+            "facetId": "2550419630908544036",
+            "name": "Women's Median Age",
+            "statVar": "Median_Age_Person_Female"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "placeDcid": [
+        "geoId/3651000"
+      ]
+    }
+  },
+  "context": {},
+  "debug": {},
+  "entities": [],
+  "pastSourceContext": "",
+  "place": {
+    "dcid": "geoId/3651000",
+    "name": "New York",
+    "place_type": "City"
+  },
+  "placeFallback": {},
+  "placeSource": "CURRENT_QUERY",
+  "places": [
+    {
+      "dcid": "geoId/3651000",
+      "name": "New York",
+      "place_type": "City"
+    }
+  ],
+  "relatedThings": {
+    "childPlaces": {},
+    "childTopics": [],
+    "exploreMore": {
+      "Count_Person": {
+        "gender": [
+          "Count_Person_Female",
+          "Count_Person_Male"
+        ]
+      },
+      "Count_Person_Female": {
+        "age": [
+          "Count_Person_15To44Years_Female",
+          "Count_Person_21OrMoreYears_Female",
+          "Count_Person_62OrMoreYears_Female",
+          "Count_Person_85OrMoreYears_Female"
+        ],
+        "race": [
+          "Count_Person_Female_AsianAlone",
+          "Count_Person_Female_BlackOrAfricanAmericanAlone",
+          "Count_Person_Female_HispanicOrLatino",
+          "Count_Person_Female_WhiteAlone"
+        ]
+      },
+      "Median_Age_Person_Female": {
+        "race": [
+          "Median_Age_Person_Female_AsianAlone",
+          "Median_Age_Person_Female_BlackOrAfricanAmericanAlone",
+          "Median_Age_Person_Female_HispanicOrLatino",
+          "Median_Age_Person_Female_WhiteAlone"
+        ]
+      }
+    },
+    "mainTopics": [
+      {
+        "dcid": "dc/topic/Gender",
+        "name": "Gender",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "parentPlaces": [],
+    "parentTopics": [
+      {
+        "dcid": "dc/topic/Demographics",
+        "name": "Demographics",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "peerPlaces": [
+      {
+        "dcid": "geoId/3502000",
+        "name": "Albuquerque",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0203000",
+        "name": "Anchorage municipality",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2603000",
+        "name": "Ann Arbor",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1304000",
+        "name": "Atlanta",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4805000",
+        "name": "Austin",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2404000",
+        "name": "Baltimore",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1608830",
+        "name": "Boise",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2507000",
+        "name": "Boston",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4513330",
+        "name": "Charleston",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3712000",
+        "name": "Charlotte",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1714000",
+        "name": "Chicago",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3915000",
+        "name": "Cincinnati",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3916000",
+        "name": "Cleveland",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3918000",
+        "name": "Columbus",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4819000",
+        "name": "Dallas",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0820000",
+        "name": "Denver",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2622000",
+        "name": "Detroit",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4824000",
+        "name": "El Paso",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0937000",
+        "name": "Hartford",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4835000",
+        "name": "Houston",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1836003",
+        "name": "Indianapolis",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2836000",
+        "name": "Jackson",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1235000",
+        "name": "Jacksonville",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2938000",
+        "name": "Kansas City",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3240000",
+        "name": "Las Vegas",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0541000",
+        "name": "Little Rock",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0644000",
+        "name": "Los Angeles",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2148006",
+        "name": "Louisville/Jefferson County metro government (balance)",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/5548000",
+        "name": "Madison",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4748000",
+        "name": "Memphis",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1245000",
+        "name": "Miami",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/5553000",
+        "name": "Milwaukee",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2743000",
+        "name": "Minneapolis",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0649670",
+        "name": "Mountain View",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4752006",
+        "name": "Nashville-Davidson metropolitan government (balance)",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0952000",
+        "name": "New Haven",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/2255000",
+        "name": "New Orleans",
+        "types": [
+          "AdministrativeArea2"
+        ]
+      },
+      {
+        "dcid": "geoId/0653000",
+        "name": "Oakland",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4055000",
+        "name": "Oklahoma City",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/3137000",
+        "name": "Omaha",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/1253000",
+        "name": "Orlando",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0655282",
+        "name": "Palo Alto",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4260000",
+        "name": "Philadelphia",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/0455000",
+        "name": "Phoenix",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4261000",
+        "name": "Pittsburgh",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4159000",
+        "name": "Portland",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/5167000",
+        "name": "Richmond",
+        "types": [
+          "AdministrativeArea2"
+        ]
+      },
+      {
+        "dcid": "geoId/0664000",
+        "name": "Sacramento",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4967000",
+        "name": "Salt Lake City",
+        "types": [
+          "City"
+        ]
+      },
+      {
+        "dcid": "geoId/4865000",
+        "name": "San Antonio",
+        "types": [
+          "City"
+        ]
+      }
+    ],
+    "peerTopics": [
+      {
+        "dcid": "dc/topic/Age",
+        "name": "Age",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Race",
+        "name": "Population by Race",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Language",
+        "name": "Language Spoken At Home",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/MaritalStatus",
+        "name": "Marital Status",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Nationality",
+        "name": "Nationality",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Veterans",
+        "name": "Veterans",
+        "types": [
+          "Topic"
+        ]
+      }
+    ]
+  },
+  "svSource": "CURRENT_QUERY",
+  "userMessages": []
+}

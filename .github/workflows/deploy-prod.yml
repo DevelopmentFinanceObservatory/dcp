@@ -1,0 +1,43 @@
+name: Deploy prod
+
+# ONE/DFO: builds the dcp image into prod's Artifact Registry and opens the
+# image-pin PR on DevelopmentFinanceObservatory/infra. build-and-pin.yml
+# holds the steps, shared with deploy-dev.yml. Runs only in the
+# DevelopmentFinanceObservatory org, where main is a tree copy of a
+# ONEcampaign/dfo-dcp commit.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Cancels an older run still mid-build so it can't push a stale pin after a
+# newer run's force-push has already landed.
+concurrency:
+  group: deploy-dcp-prod
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  checks:
+    if: github.repository_owner == 'DevelopmentFinanceObservatory'
+    uses: ./.github/workflows/checks.yml
+
+  build-and-deploy:
+    needs: checks
+    if: github.repository_owner == 'DevelopmentFinanceObservatory'
+    uses: ./.github/workflows/build-and-pin.yml
+    # A called workflow sees no secrets, its environment's included, without this.
+    secrets: inherit
+    with:
+      environment: production
+      tier: prod
+      deploy-branch: main
+      infra-owner: DevelopmentFinanceObservatory
+      infra-repo: infra
+      # A release team member approves and merges the pin PR.
+      auto-merge: false
+      app: dfo-release

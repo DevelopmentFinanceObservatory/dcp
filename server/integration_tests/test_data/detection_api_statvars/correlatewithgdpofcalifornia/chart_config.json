@@ -1,0 +1,68 @@
+{
+  "childEntityType": "",
+  "classifications": [
+    {
+      "correlation": true,
+      "type": 5
+    },
+    {
+      "contained_in_place_type": "DefaultType",
+      "had_default_type": true,
+      "type": 4
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [],
+  "comparisonVariables": [
+    "dc/xj2nk2bg60fg",
+    "dc/topic/Income",
+    "Amount_EconomicActivity_GrossDomesticProduction_NAICSInformation_RealValue",
+    "Count_Worker_NAICSInformation",
+    "WagesTotal_Worker_NAICSInformation",
+    "dc/topic/IndividualIncomeByIndustry",
+    "ReceiptsOrRevenue_Establishment_NAICSInformation_WithPayroll",
+    "USStateQuarterlyIndustryGDP_NAICS_51",
+    "WagesAnnual_Establishment_NAICSInformation",
+    "Count_Person_15OrMoreYears_WithIncome",
+    "dc/topic/IndustriesByRevenue",
+    "dc/topic/IncomeEquity",
+    "Count_Person_15OrMoreYears_InformationAndTelecommunication_Employed",
+    "dc/x3gghqtglpr59",
+    "dc/topic/GDPByIndustry",
+    "dc/topic/VeteransIncome",
+    "Count_Person_16OrMoreYears_WithEarnings",
+    "Count_Person_Employed_NACE/J",
+    "dc/topic/InternetPublishingAndBroadcastingIndustry",
+    "Income_Farm"
+  ],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "geoId/06"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "dc/topic/GDP",
+    "Amount_EconomicActivity_GrossDomesticProduction_Nominal",
+    "GrowthRate_Amount_EconomicActivity_GrossDomesticProduction",
+    "dc/topic/EconomicActivity",
+    "dc/topic/GlobalEconomicActivity",
+    "dc/topic/Economy",
+    "Amount_EconomicActivity_GrossDomesticProduction_RealValue",
+    "InflationAdjustedGDP",
+    "dc/topic/GDPByIndustry",
+    "Amount_EconomicActivity_GrossDomesticProduction_Nominal_AsAFractionOf_Count_Person",
+    "Amount_EconomicActivity_GrossDomesticProduction_Nominal_PerCapita",
+    "Amount_EconomicActivity_GrossValueAdded_RealValue",
+    "Amount_EconomicActivity_GrossNationalIncome_PurchasingPowerParity",
+    "GrowthRate_Amount_EconomicActivity_GrossDomesticProduction_ManufacturingSector",
+    "USStateQuarterlyIndustryGDP_NAICS_23",
+    "dc/topic/sdg_8.1.1",
+    "Amount_EconomicActivity_GrossNationalIncome_PurchasingPowerParity_PerCapita",
+    "dc/topic/sdg_8.2.1",
+    "Adjusted_GrowthRate_GrossDomesticProduct_EconomicActivity_QuarterOnChange",
+    "dc/topic/IndustriesByGDP"
+  ]
+}

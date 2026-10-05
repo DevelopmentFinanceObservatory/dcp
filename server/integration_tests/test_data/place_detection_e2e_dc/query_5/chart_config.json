@@ -1,0 +1,508 @@
+{
+  "client": "test",
+  "config": {
+    "categories": [
+      {
+        "blocks": [
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person"
+                    ],
+                    "title": "Population in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population in Mexico City",
+                    "statVarKey": [
+                      "Count_Person"
+                    ],
+                    "title": "Population in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "The total number of people in a population.",
+            "title": "Population"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Count_Person"
+                    ],
+                    "title": "Population in Administrative Area 2 Places of Mexico City (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "description": "The total number of people in a population.",
+            "title": "Population in Administrative Area 2 Places of Mexico City"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_PerArea"
+                    ],
+                    "title": "Population Density in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Population Density in Mexico City",
+                    "statVarKey": [
+                      "Count_Person_PerArea"
+                    ],
+                    "title": "Population Density in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Population Density"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_Person_Female",
+                      "Count_Person_Male"
+                    ],
+                    "title": "Population by Gender in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Gender"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Count_Person_Female"
+                    ],
+                    "title": "Women in Administrative Area 2 Places of Mexico City (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Gender in Administrative Area 2 Places of Mexico City"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Count_Person_Male"
+                    ],
+                    "title": "Men in Administrative Area 2 Places of Mexico City (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population by Gender in Administrative Area 2 Places of Mexico City"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "GrowthRate_Count_Person"
+                    ],
+                    "title": "Rate of Population Growth in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Rate of Population Growth in Mexico City",
+                    "statVarKey": [
+                      "GrowthRate_Count_Person"
+                    ],
+                    "title": "Rate of Population Growth in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "description": "The percentage change in the total number of people in a population over a specific period.",
+            "title": "Rate of Population Growth"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "statVarKey": [
+                      "Count_BirthEvent"
+                    ],
+                    "title": "Count of Birth Event in Mexico City",
+                    "type": "LINE"
+                  }
+                ]
+              },
+              {
+                "tiles": [
+                  {
+                    "description": "Count of Birth Event in Mexico City",
+                    "statVarKey": [
+                      "Count_BirthEvent"
+                    ],
+                    "title": "Count of Birth Event in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "title": "Count of Birth Event"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "description": "Population: Years 65 Onwards in Mexico City",
+                    "statVarKey": [
+                      "Count_Person_65OrMoreYears"
+                    ],
+                    "title": "Population: Years 65 Onwards in Mexico City",
+                    "type": "HIGHLIGHT"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Years 65 Onwards"
+          },
+          {
+            "columns": [
+              {
+                "tiles": [
+                  {
+                    "rankingTileSpec": {
+                      "rankingCount": 5,
+                      "showHighestLowest": true
+                    },
+                    "statVarKey": [
+                      "Count_Person_65OrMoreYears"
+                    ],
+                    "title": "Population: Years 65 Onwards in Administrative Area 2 Places of Mexico City (${date})",
+                    "type": "RANKING"
+                  }
+                ]
+              }
+            ],
+            "denom": "Count_Person",
+            "title": "Population: Years 65 Onwards in Administrative Area 2 Places of Mexico City"
+          }
+        ],
+        "statVarSpec": {
+          "Count_BirthEvent": {
+            "name": "Count of Birth Event",
+            "statVar": "Count_BirthEvent"
+          },
+          "Count_Person": {
+            "name": "Population",
+            "statVar": "Count_Person"
+          },
+          "Count_Person_65OrMoreYears": {
+            "name": "Population: Years 65 Onwards",
+            "statVar": "Count_Person_65OrMoreYears"
+          },
+          "Count_Person_Female": {
+            "name": "Women",
+            "statVar": "Count_Person_Female"
+          },
+          "Count_Person_Male": {
+            "name": "Men",
+            "statVar": "Count_Person_Male"
+          },
+          "Count_Person_PerArea": {
+            "name": "Population Density",
+            "statVar": "Count_Person_PerArea"
+          },
+          "GrowthRate_Count_Person": {
+            "name": "Rate of Population Growth",
+            "statVar": "GrowthRate_Count_Person"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "containedPlaceTypes": {
+        "AdministrativeArea1": "AdministrativeArea2"
+      },
+      "placeDcid": [
+        "wikidataId/Q1489"
+      ]
+    }
+  },
+  "context": {},
+  "debug": {},
+  "entities": [],
+  "pastSourceContext": "",
+  "place": {
+    "dcid": "wikidataId/Q1489",
+    "name": "Mexico City",
+    "place_type": "AdministrativeArea1"
+  },
+  "placeFallback": {},
+  "placeSource": "CURRENT_QUERY",
+  "places": [
+    {
+      "dcid": "wikidataId/Q1489",
+      "name": "Mexico City",
+      "place_type": "AdministrativeArea1"
+    }
+  ],
+  "relatedThings": {
+    "childPlaces": {
+      "AdministrativeArea2": [
+        {
+          "dcid": "wikidataId/Q10832464",
+          "name": "Venustiano Carranza",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q14906254",
+          "name": "\u00c1lvaro Obreg\u00f3n",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q1832732",
+          "name": "Miguel Hidalgo",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q2027082",
+          "name": "Gustavo A. Madero",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q2356998",
+          "name": "Benito Ju\u00e1rez",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q408181",
+          "name": "Tl\u00e1huac",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q408187",
+          "name": "Tlalpan",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q643026",
+          "name": "Xochimilco",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q645293",
+          "name": "Cuauht\u00e9moc",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q661315",
+          "name": "Coyoac\u00e1n",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q741771",
+          "name": "Iztapalapa",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q762749",
+          "name": "Cuajimalpa",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q780038",
+          "name": "La Magdalena Contreras",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q936087",
+          "name": "Milpa Alta",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q953866",
+          "name": "Tlalpan",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        },
+        {
+          "dcid": "wikidataId/Q994867",
+          "name": "Azcapotzalco",
+          "types": [
+            "AdministrativeArea2"
+          ]
+        }
+      ]
+    },
+    "childTopics": [
+      {
+        "dcid": "dc/topic/Age",
+        "name": "Age",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Gender",
+        "name": "Gender",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Nationality",
+        "name": "Nationality",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "exploreMore": {
+      "Count_BirthEvent": {
+        "gender": [
+          "Count_BirthEvent_Female",
+          "Count_BirthEvent_Male"
+        ]
+      },
+      "Count_Person": {
+        "gender": [
+          "Count_Person_Female",
+          "Count_Person_Male"
+        ]
+      }
+    },
+    "mainTopics": [
+      {
+        "dcid": "dc/topic/Demographics",
+        "name": "Demographics",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "parentPlaces": [],
+    "parentTopics": [
+      {
+        "dcid": "dc/topic/Root",
+        "name": "Statistics",
+        "types": [
+          "Topic"
+        ]
+      }
+    ],
+    "peerPlaces": [],
+    "peerTopics": [
+      {
+        "dcid": "dc/topic/Health",
+        "name": "Health",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/EducationHousingAndCommute",
+        "name": "Education, Housing and Commute",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Equity",
+        "name": "Equity",
+        "types": [
+          "Topic"
+        ]
+      },
+      {
+        "dcid": "dc/topic/Sustainability",
+        "name": "Sustainability",
+        "types": [
+          "Topic"
+        ]
+      }
+    ]
+  },
+  "svSource": "CURRENT_QUERY",
+  "userMessages": []
+}

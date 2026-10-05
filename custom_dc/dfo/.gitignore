@@ -1,0 +1,10 @@
+node_modules
+.next
+next-env.d.ts
+*.tsbuildinfo
+# Never commit env secrets — copy env.list.sample to env.list and fill in
+env.list
+env*.list
+# Next.js's canonical local-env pattern (e.g. prototypes/.env.local holds live keys).
+# Deliberately does not match .env.example/.env.sample.
+.env*.local

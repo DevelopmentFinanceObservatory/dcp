@@ -1,0 +1,55 @@
+{#
+  Copyright 2022 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+#}
+
+{%- extends BASE_HTML -%}
+
+{% set is_hide_full_footer = true %}
+{% set title = "Download Tool" %}
+{% set is_hide_header_search_bar = true %}
+{% set main_id = 'main-download' %}
+{% set page_id = 'page-download' %}
+
+{% block head %}
+  <link rel="stylesheet" href={{url_for('static', filename='css/download.min.css')}} >
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
+{% endblock %}
+
+{% block content %}
+  {% if use_new_download_tool %}
+      <div id="main-pane"></div>
+      <script>
+        globalThis.visToolExamples = {{ vis_tool_examples_json | tojson | safe }};
+      </script>
+  {% else %}
+    <div id="main-pane" data-info-places="{{ info_places }}"></div>
+  {% endif %}
+{% endblock %}
+
+
+{% block footer %}
+
+  {% if use_new_download_tool %}
+    <script src={{url_for('static', filename='download.js', t=config['VERSION'])}}></script>
+  {% else %}
+    <script src={{url_for('static', filename='old_download.js', t=config['VERSION'])}}></script>
+  {% endif %}
+
+  <script src="https://maps.googleapis.com/maps/api/js?key={{maps_api_key}}&libraries=places&loading=async" async defer></script>
+{% endblock %}
+
+
+

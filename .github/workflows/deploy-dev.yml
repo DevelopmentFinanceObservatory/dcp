@@ -1,0 +1,45 @@
+name: Deploy dev
+
+# ONE/DFO: builds the dcp image into dev's Artifact Registry and opens the
+# image-pin PR on ONEcampaign/dfo-infra. build-and-pin.yml holds the steps,
+# shared with deploy-prod.yml.
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch: {}
+
+# Cancels an older run still mid-build so it can't push a stale pin after a
+# newer run's force-push has already landed.
+concurrency:
+  group: deploy-dcp-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # Same checks ci.yml runs. The build job below needs: it so a push that
+  # lands with red tests (workflow_dispatch, an admin override) can't still
+  # deploy.
+  checks:
+    if: github.repository_owner == 'ONEcampaign'
+    uses: ./.github/workflows/checks.yml
+
+  build-and-deploy:
+    needs: checks
+    if: github.repository_owner == 'ONEcampaign'
+    uses: ./.github/workflows/build-and-pin.yml
+    # A called workflow sees no secrets, its environment's included, without this.
+    secrets: inherit
+    with:
+      environment: dev
+      tier: dev
+      deploy-branch: dev
+      infra-owner: ONEcampaign
+      infra-repo: dfo-infra
+      # dfo-infra's approve-image-pin.yml approves a pin PR once its checks
+      # pass, and the armed auto-merge then lands it.
+      auto-merge: true
+      app: dfo-bot

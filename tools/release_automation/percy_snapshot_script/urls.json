@@ -1,0 +1,154 @@
+[
+  {
+    "path": "/",
+    "name": "Home page"
+  },
+  {
+    "path": "/version",
+    "name": "Version page"
+  },
+  {
+    "path": "/about",
+    "name": "About page"
+  },
+  {
+    "path": "/faq",
+    "name": "FAQ page"
+  },
+  {
+    "path": "/data/economy",
+    "name": "Economy data sources"
+  },
+  {
+    "path": "/place",
+    "name": "Place landing page"
+  },
+  {
+    "path": "/place/country/USA?topic=Demographics&seed=1",
+    "name": "US Demographics"
+  },
+  {
+    "path": "/place/Earth?seed=1",
+    "name": "Earth Place Page"
+  },
+  {
+    "path": "/place/geoId/06?category=Demographics&seed=1",
+    "name": "California Demographics"
+  },
+  {
+    "path": "/place/country/IND?hl=hi&seed=1",
+    "name": "India Place Page in Hindi"
+  },
+  {
+    "path": "/browser",
+    "name": "Browser landing page"
+  },
+  {
+    "path": "/browser/geoId/06",
+    "name": "California Browser Page"
+  },
+  {
+    "path": "/browser/geoId/06085?statVar=Count_Person_AsianAlone",
+    "name": "Santa Clara County Asian Population Count"
+  },
+  {
+    "path": "/tools/visualization#visType=timeline",
+    "name": "Timeline redirect"
+  },
+  {
+    "path": "/tools/visualization#visType=map",
+    "name": "Map redirect"
+  },
+  {
+    "path": "/tools/visualization#visType=scatter",
+    "name": "Scatter redirect"
+  },
+  {
+    "path": "/tools/timeline#&place=geoId/0606000,geoId/2511000&statsVar=Median_Age_Person",
+    "name": "Median Age Timeline in Berkeley and Cambridge"
+  },
+  {
+    "path": "/tools/map#%26sv%3DAnnual_Emissions_CarbonDioxide_NonBiogenic%26pc%3D0%26denom%3DCount_Person%26pd%3Dcountry%2FUSA%26ept%3DState%26ppt%3DEpaReportingFacility",
+    "name": "US State Carbon Dioxide Emissions Map"
+  },
+  {
+    "path": "/tools/scatter#%26svx%3DDifferenceRelativeToBaseDate2006_Max_Temperature_RCP45%26dx%3DCount_Person%26svy%3DPercent_Person_WithCoronaryHeartDisease%26dy%3DCount_Person%26epd%3DgeoId%2F12%26ept%3DCounty%26pp%3D",
+    "name": "Heart Disease vs. Temperature Scatter Plot in Florida Counties"
+  },
+  {
+    "path": "/tools/statvar#sv=Mean_WagesDaily_Worker",
+    "name": "Mean Daily Worker Wages Statistics"
+  },
+  {
+    "path": "/tools/statvar#s=dc%2Fs%2FEuropeanUnionEuEurostat&d=dc%2Fd%2FEuropeanUnionEuEurostat_EurostatEarlyEducationAndTraining",
+    "name": "Stat var explorer dataset filter"
+  },
+  {
+    "path": "/tools/download",
+    "name": "Download Tool"
+  },
+  {
+    "path": "/tools/download#pt=State&place=country%2FUSA&sv=Count_Farm&dtType=LATEST&facets=%7B%7D",
+    "name": "Download preview"
+  },
+  {
+    "path": "/ranking/Count_Person/CensusZipCodeTabulationArea/country/USA?disable_feature=new_ranking_page",
+    "name": "US Census Zip Code Tabulation Area Population Count"
+  },
+  {
+    "path": "/ranking/Count_Person/State/country/IND?disable_feature=new_ranking_page",
+    "name": "India State Population Ranking"
+  },
+  {
+    "path": "/explore/economics",
+    "name": "Explore: Economics topic page"
+  },
+  {
+    "path": "/explore#sv=Count_Person&p=nuts%2FUKE12&client=ui_related_topic&chartType=TIMELINE_WITH_HIGHLIGHT&imp=EurostatData_Demographic_Balance_Crude_Rates&test=screenshot",
+    "name": "Explore: Pinned Timeline & Highlight tiles (Eurostat)"
+  },
+  {
+    "path": "/explore#sv=Count_Person&p=geoId%2F04___geoId%2F06&client=ui_related_topic&chartType=BAR_CHART&imp=CensusACS5yrSurvey&test=screenshot",
+    "name": "Explore: Pinned Bar tile (Census)"
+  },
+  {
+    "path": "/explore?sv=LifeExpectancy_Person&p=africa&chartType=RANKING_WITH_MAP&unit=Rank&date=2023&imp=WorldDevelopmentIndicators&mb=4&test=screenshot",
+    "name": "Explore: Pinned Map & Ranking tiles (WDI)"
+  },
+  {
+    "path": "/explore/#q=Obesity+vs+Unemployment+in+the+US+counties&mb=3&test=screenshot",
+    "name": "Explore: Obesity vs. Unemployment in US Counties"
+  },
+  {
+    "path": "/explore/#q=health+behaviors+in+India+vs+Norway&mb=3&test=screenshot",
+    "name": "Explore: Health Behaviors in India vs. Norway"
+  },
+  {
+    "path": "/explore/#q=Student+demographics+among+schools+in+Sunnyvale&mb=3&test=screenshot",
+    "name": "Explore: Student Demographics in Sunnyvale Schools"
+  },
+  {
+    "path": "/explore#q=AQI+vs+blood+pressure+in+New+Jersey&mb=3&test=screenshot",
+    "name": "Explore: AQI vs. Blood Pressure in New Jersey"
+  },
+  {
+    "path": "/explore#q=What+is+the+GDP+of+Iran&mb=4&test=screenshot",
+    "name": "Explore: Iran GDP"
+  },
+  {
+    "path": "/explore#q=Compare+the+education+expenditure+in+the+US+vs+Canada&mb=4&test=screenshot",
+    "name": "Explore: US vs. Canada Education Expenditure"
+  },
+  {
+    "path": "/explore#q=Floods+in+Pakistan&mb=4&test=screenshot",
+    "name": "Explore: Floods in Pakistan"
+  },
+  {
+    "path": "/explore#q=Which+gender+is+stupid+in+India?&mb=4&test=screenshot",
+    "name": "Explore: Gender Intelligence in India (Refused)"
+  },
+  {
+    "path": "/topic/equity/country/USA",
+    "name": "Subject page: Equity in USA"
+  }
+]

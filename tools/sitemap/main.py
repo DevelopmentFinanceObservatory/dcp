@@ -1,0 +1,221 @@
+# Copyright 2020 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import csv
+import logging
+import os
+import time
+from typing import List
+
+from datacommons_client import DataCommonsClient
+import requests
+
+logging.getLogger().setLevel(logging.INFO)
+
+PLACES = [
+    'CensusZipCodeTabulationArea',
+    'City',
+    'County',
+    'CensusTract',
+    'SchoolDistrict',
+    'CensusCountyDivision',
+    'CongressionalDistrict',
+    'CensusCoreBasedStatisticalArea',
+    'HighSchoolDistrict',
+    'ElementarySchoolDistrict',
+    'State',
+    'Country',
+    'CommutingZone',
+    'EurostatNUTS1',
+    'EurostatNUTS2',
+    'EurostatNUTS3',
+    'StateComponent',
+    'AdministrativeArea1',
+    'AdministrativeArea2',
+    'AdministrativeArea3',
+    'AdministrativeArea4',
+    'Province',
+    'Continent',
+]
+
+SITE_PREFIX = 'https://datacommons.org/place/'
+SAVE_PATH = '../../static/sitemap/'
+
+# each file can contain up to 50,000 lines
+# https://www.sitemaps.org/protocol.html#otherformats
+LINE_LIMIT = 45000
+
+# Name for sitemap with priority places to test
+PRIORITY_PLACE_SITEMAP = "PriorityPlaces.0.txt"
+
+# CSV storing BQ query results for queries that are too heavy for mixer
+BQ_CSV = "cities_with_population_over_500k.csv"
+
+
+# Generator to yield chunks from a list
+def chunks(lst, n):
+  """Yield successive n-sized chunks from lst."""
+  for i in range(0, len(lst), n):
+    yield lst[i:i + n]
+
+
+def fetch_place_dcids_by_type(dc_client: DataCommonsClient, place_type: str):
+  """Return all dcids for entities of the given type."""
+  response = dc_client.node.fetch_property_values(
+      node_dcids=place_type,
+      properties='typeOf',
+      out=False,
+  )
+  return sorted(
+      set(dcid for dcid in response.extract_connected_dcids(
+          place_type, property_dcid='typeOf') if dcid))
+
+
+def write_place_url(dc_client: DataCommonsClient, place_type: str):
+  logging.info(place_type)
+  try:
+    data = fetch_place_dcids_by_type(dc_client, place_type)
+  except Exception:
+    logging.exception('Got an error while query %s', place_type)
+    return
+  index = 0
+  for places in chunks(data, LINE_LIMIT):
+    file_name = '{}{}.{}.txt'.format(SAVE_PATH, place_type, index)
+    with open(file_name, 'w') as f:
+      logging.info('writing to file: %s', file_name)
+      for p in places:
+        f.write(SITE_PREFIX + p + '\n')
+    index += 1
+    time.sleep(10)
+
+
+def get_us_states(dc_client: DataCommonsClient) -> List[str]:
+  """Get list of DCIDs corresponding to US states and Washington DC"""
+  try:
+    state_data = dc_client.node.fetch_place_children(
+        place_dcids='country/USA',
+        children_type='State',
+        as_dict=True,
+    )
+  except Exception:
+    logging.exception('Got an error while querying for US states')
+    return []
+
+  # Includes 50 states + Washington, DC. Excludes Puerto Rico (geoId/72).
+  dcids = sorted({
+      state.get('dcid')
+      for state in state_data.get('country/USA', [])
+      if isinstance(state, dict) and state.get('dcid') and
+      state.get('dcid') != 'geoId/72'
+  })
+  return dcids
+
+
+def get_global_cities_with_population_over_500k() -> List[str]:
+  """Get DCIDs of global cities with population over 500k"""
+  dcids = []
+  with open(BQ_CSV) as f:
+    cities = csv.DictReader(f)
+    for city in cities:
+      # Filter out West Berlin, which does not have charts and because it no
+      # longer exists, it will not get any new charts added.
+      # TODO (juliawu): This is a temporary change to cleanup our sitemaps
+      #                 while the node in the KG is being fixed. Once the
+      #                 KG is updated, replace this fix with an updated
+      #                 BQ query which filters out nodes with a dissolutionDate.
+      if 'dcid' in city and city['dcid'] != "nuts/DE301":
+        dcids.append(city['dcid'])
+  return dcids
+
+
+def get_top_100_us_cities(dc_client: DataCommonsClient) -> List[str]:
+  """Get DCIDs of top 100 US cities by population"""
+  try:
+    # Query for cities in USA, filtering on population (Count_Person)
+    response = dc_client.observation.fetch_observations_by_entity_type(
+        date="latest",
+        parent_entity="country/USA",
+        entity_type="City",
+        variable_dcids=["Count_Person"])
+    records = response.to_observation_records()
+  except Exception:
+    logging.exception('Got an error while querying for US cities population')
+    return []
+
+  # Group and deduplicate city DCIDs, keeping the observation with the most recent date
+  city_populations = {}  # maps city_dcid -> (population_value, date_string)
+  for record in records:
+    # Skip records missing essential fields
+    if not (record.entity and record.value and record.date):
+      continue
+    # Skip records with a DCID that are "geoId/" followed by a 5-digit FIPS code.
+    # This makes sure we don't add counties to our top 100 US cities list,
+    # which can happen due to how some counties are currently modeled in the KG.
+    if record.entity.startswith("geoId/") and len(
+        record.entity) == 11 and record.entity[6:].isdigit():
+      continue
+    # Get the current record for this city, if one exists.
+    current_value, current_date = city_populations.get(record.entity, (-1, ""))
+    # Keep the record with the more recent date. If dates match, select the higher value.
+    if (record.date > current_date) or (record.date == current_date and
+                                        record.value > current_value):
+      city_populations[record.entity] = (record.value, record.date)
+  # Sort cities descending by population value (index 0 of the tuple)
+  sorted_cities = sorted(city_populations.items(),
+                         key=lambda x: x[1][0],
+                         reverse=True)
+  # Take the top 100 city DCIDs
+  return [city[0] for city in sorted_cities[:100]]
+
+
+def write_priority_places_sitemap(dc_client: DataCommonsClient) -> None:
+  """Write a custom sitemap for SEO testing.
+  
+  Writes a sitemap with 50 US states, Washington D.C., the top 100
+  US cities by population, and cities around the world with a population of
+  500k or greater.
+  """
+  dcids = get_us_states(dc_client)
+  dcids += get_top_100_us_cities(dc_client)
+  dcids += get_global_cities_with_population_over_500k()
+
+  # Deduplicate while preserving order
+  unique_dcids = list(dict.fromkeys(dcids))
+
+  # Write to file
+  sitemap_location = os.path.join(SAVE_PATH, PRIORITY_PLACE_SITEMAP)
+  with open(sitemap_location, "w") as f:
+    for place_dcid in unique_dcids:
+      f.write(SITE_PREFIX + place_dcid + '\n')
+
+
+def updateRobotTxt():
+  with open('../../static/robots.txt', 'w') as robot:
+    for f in os.listdir(SAVE_PATH):
+      robot.write('Sitemap: https://datacommons.org/sitemap/{}\n'.format(f))
+
+
+def main():
+  api_key = os.environ.get('DC_API_KEY', '').strip()
+  if not api_key:
+    raise ValueError('DC_API_KEY environment variable is required.')
+  dc_client = DataCommonsClient(api_key=api_key)
+  for place_type in PLACES:
+    write_place_url(dc_client, place_type)
+  write_priority_places_sitemap(dc_client)
+  updateRobotTxt()
+
+
+if __name__ == "__main__":
+  main()
