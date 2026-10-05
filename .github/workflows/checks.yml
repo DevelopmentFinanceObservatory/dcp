@@ -9,9 +9,8 @@ name: DFO checks
 # `on: workflow_call` rather than plain jobs in ci.yml so deploy-dev.yml and
 # deploy-prod.yml can `needs:` it directly, including on their
 # workflow_dispatch path, which a `workflow_run` trigger off ci.yml would not
-# cover. ci.yml and deploy-dev.yml both fire independently on push to dev;
-# without this shared dependency, a merge with red tests could still build,
-# push, and pin while ci.yml separately reported failure.
+# cover. deploy-dev.yml runs it on every push to dev, so a merge with red
+# tests cannot build, push, or pin.
 
 on:
   workflow_call: {}
