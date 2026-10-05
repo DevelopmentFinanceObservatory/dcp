@@ -1,0 +1,31 @@
+**/node_modules
+
+**/dist
+**/__pycache__
+**/.pytest_cache
+.pytest_cache
+
+.git
+.env
+
+pytest_log.txt
+
+**/eval/**/result
+
+import/simple/sample/
+**/.data
+**/testdata
+**/test_data
+
+# ONE/DFO: exclude build artifacts from the Docker build context; keep source.
+**/.next
+custom_dc/dfo/prototypes/node_modules
+# Local Python venvs (the Search API's venv is rebuilt inside the Docker stage).
+**/.venv
+# ONE/DFO: never send env secrets into the build context. The nested
+# custom_dc/dfo/.gitignore protects git, not the Docker build context — list here too.
+custom_dc/dfo/env.list
+custom_dc/dfo/env*.list
+# Next.js local-env files (e.g. prototypes/.env.local holds a live API key); the
+# Dockerfile COPYs custom_dc/dfo/prototypes/ ./ wholesale, so this must be excluded here too.
+custom_dc/dfo/prototypes/.env*.local

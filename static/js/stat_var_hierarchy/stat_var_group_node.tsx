@@ -1,0 +1,381 @@
+/**
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Component for rendering a stat var group node in the stat var hierarchy
+ */
+
+import axios from "axios";
+import _ from "lodash";
+import React from "react";
+import Collapsible from "react-collapsible";
+
+import { ProgressActivity } from "../components/elements/icons/progress_activity";
+import { ASYNC_ELEMENT_HOLDER_CLASS } from "../constants/css_constants";
+import { Context, ContextType } from "../shared/context";
+import {
+  GA_EVENT_STATVAR_HIERARCHY_CLICK,
+  triggerGAEvent,
+} from "../shared/ga_events";
+import {
+  NamedNode,
+  StatVarGroupInfo,
+  StatVarHierarchyNodeType,
+  StatVarHierarchyType,
+  StatVarInfo,
+} from "../shared/types";
+import { getUrlWithSearchParamsToPropagate } from "../utils/url_utils";
+import {
+  StatVarHierarchyNodeHeader,
+  StatVarHierarchyNodeHeaderPropType,
+} from "./node_header";
+import { StatVarGroupSection } from "./stat_var_group_section";
+import { StatVarSection } from "./stat_var_section";
+import { isRadioButtonType } from "./util";
+
+const SCROLL_DELAY = 400;
+// Stat var hierarchy types where nodes containing selected SV should be
+// expanded on initial render of the page.
+const INITIAL_EXPANSION_TYPES = [
+  ...Object.values(StatVarHierarchyType).filter((type) =>
+    isRadioButtonType(type)
+  ),
+  StatVarHierarchyType.BROWSER,
+];
+
+interface StatVarGroupNodePropType {
+  // The path of this stat var group node.
+  path: string[];
+  // A list of named node objects.
+  entities: NamedNode[];
+  // The information for the stat var group node.
+  data: StatVarGroupInfo;
+  // if a statvar or statvar group has been selected, the path of stat var
+  // groups from root to selected stat var group or stat var
+  pathToSelection: string[];
+  // whether the current component has been selected and should be highlighted
+  isSelected: boolean;
+  // whether the current component should be opened when rendered
+  startsOpened: boolean;
+  // whether we should show all stat vars, even the ones without data.
+  showAllSV: boolean;
+  // path of svgs that should be expanded.
+  expandedPath: string[];
+  // Number of entities that should have data for each stat var (group) shown
+  numEntitiesExistence?: number;
+  // Source constraint for the node
+  dataSource?: string;
+}
+
+interface StatVarGroupNodeStateType {
+  // whether this node should be open.
+  isOpen: boolean;
+  // A list of child stat var group nodes.
+  childSVG: StatVarGroupInfo[];
+  // A list of child stat var nodes.
+  childSV: StatVarInfo[];
+  // Error message when failed to render this component.
+  errorMessage: string;
+  // Whether the next level of information is fetched.
+  dataFetchedEntities: NamedNode[];
+  // Number of SVs under this stat var group node has been selected.
+  selectionCount: number;
+  // Whether the data is being fetched.
+  isLoading: boolean;
+}
+
+export class StatVarGroupNode extends React.Component<
+  StatVarGroupNodePropType,
+  StatVarGroupNodeStateType
+> {
+  highlightedStatVar: React.RefObject<HTMLDivElement>;
+  delayTimer: NodeJS.Timeout;
+  context: ContextType;
+  dataFetchingEntities: NamedNode[];
+  dataAbortController: AbortController;
+
+  constructor(props: StatVarGroupNodePropType) {
+    super(props);
+    this.state = {
+      isOpen: this.props.startsOpened,
+      childSVG: [],
+      childSV: [],
+      errorMessage: "",
+      dataFetchedEntities: null,
+      selectionCount: 0,
+      isLoading: false,
+    };
+    this.highlightedStatVar = React.createRef();
+    this.dataFetchingEntities = null;
+    this.dataAbortController = null;
+    this.scrollToHighlighted = this.scrollToHighlighted.bind(this);
+    this.fetchData = this.fetchData.bind(this);
+  }
+
+  componentDidMount(): void {
+    this.fetchDataIfNecessary();
+    const selectionCount = this.getSelectionCount();
+    if (selectionCount > 0) {
+      this.setState({
+        selectionCount,
+        isOpen: INITIAL_EXPANSION_TYPES.includes(
+          this.context.statVarHierarchyType
+        ),
+      });
+    }
+  }
+
+  componentDidUpdate(prevProps: StatVarGroupNodePropType): void {
+    const newSelectionCount = this.getSelectionCount();
+    const newState = { ...this.state };
+    newState.selectionCount = newSelectionCount;
+    newState.isOpen = this.getIsNodeOpen(prevProps, newSelectionCount);
+    if (!_.isEqual(this.state, newState)) {
+      this.setState(newState);
+    }
+    this.fetchDataIfNecessary();
+    this.scrollToHighlighted();
+  }
+
+  componentWillUnmount(): void {
+    this.dataAbortController?.abort();
+  }
+
+  fetchDataIfNecessary(): void {
+    // Check if data for current list of entities is being fetched or has already
+    // finished fetching. If so, don't fetch again.
+    const entitiesFetched =
+      _.isEqual(this.state.dataFetchedEntities, this.props.entities) ||
+      _.isEqual(this.dataFetchingEntities, this.props.entities);
+    if (this.state.isOpen && !entitiesFetched) {
+      this.fetchData();
+    }
+  }
+
+  getSelectionCount(): number {
+    let count = 0;
+    const level = this.props.path.length;
+    for (const sv in this.context.svPath) {
+      const path = this.context.svPath[sv];
+      if (_.isEqual(path.slice(0, level), this.props.path)) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  render(): JSX.Element {
+    let triggerTitle = this.props.data.specializedEntity
+      ? this.props.data.specializedEntity
+      : this.props.data.displayName;
+    if (this.props.data.id === "dc/g/Private") {
+      triggerTitle = `[${triggerTitle}]`;
+    }
+
+    const level = this.props.path.length;
+    const svgOnSvPath = new Set();
+    for (const sv in this.context.svPath) {
+      const path = this.context.svPath[sv];
+      if (level < path.length) {
+        svgOnSvPath.add(path[level]);
+      }
+    }
+    // No filtering is active if no places, data sources, or entity count thresholds are indicated.
+    // In this case, we are in full hierarchy exploration mode.
+    const noFilteringActive =
+      this.props.entities.length === 0 &&
+      !this.props.dataSource &&
+      !this.props.numEntitiesExistence;
+    let childSV = this.state.childSV;
+    if (noFilteringActive) {
+      childSV = childSV.map((sv) => ({ ...sv, hasData: true }));
+    } else if (!this.props.showAllSV) {
+      childSV = childSV.filter(
+        (sv) => sv.hasData || sv.id in this.context.svPath
+      );
+    }
+
+    let childSVG = this.state.childSVG;
+    if (!this.props.showAllSV && !noFilteringActive) {
+      childSVG = childSVG.filter((svg) => {
+        return svg.descendentStatVarCount > 0 || svgOnSvPath.has(svg.id);
+      });
+    }
+    const getTrigger = (
+      opened: boolean
+    ): React.CElement<
+      StatVarHierarchyNodeHeaderPropType,
+      StatVarHierarchyNodeHeader
+    > => {
+      return React.createElement(StatVarHierarchyNodeHeader, {
+        childrenStatVarCount: this.props.data.descendentStatVarCount,
+        highlighted: this.props.isSelected,
+        nodeType: StatVarHierarchyNodeType.STAT_VAR_GROUP,
+        opened,
+        selectionCount: this.state.selectionCount,
+        title: triggerTitle,
+        showTooltip: this.props.path.length > 1,
+        nodeDcid: this.props.data.id,
+      });
+    };
+    const shouldOpen = this.state.isOpen;
+    return (
+      <>
+        {!_.isEmpty(this.state.errorMessage) && (
+          <div className="error-message">{this.state.errorMessage}</div>
+        )}
+        <Collapsible
+          trigger={getTrigger(false)}
+          triggerWhenOpen={getTrigger(true)}
+          open={shouldOpen}
+          handleTriggerClick={(): void => {
+            triggerGAEvent(GA_EVENT_STATVAR_HIERARCHY_CLICK, {});
+            this.setState({ isOpen: !this.state.isOpen });
+          }}
+          transitionTime={200}
+          onOpen={this.scrollToHighlighted}
+          containerElementProps={
+            shouldOpen ? { className: ASYNC_ELEMENT_HOLDER_CLASS } : {}
+          }
+        >
+          <>
+            {this.state.isLoading &&
+              _.isEmpty(this.state.childSV) &&
+              _.isEmpty(this.state.childSVG) && (
+                <div className="node-loading-spinner">
+                  <ProgressActivity />
+                  <span>Loading...</span>
+                </div>
+              )}
+            {this.props.pathToSelection.length < 2 &&
+              !_.isEmpty(this.state.childSV) && (
+                <StatVarSection
+                  path={this.props.path}
+                  data={childSV}
+                  pathToSelection={this.props.pathToSelection}
+                  entities={this.props.entities}
+                  highlightedStatVar={this.highlightedStatVar}
+                />
+              )}
+            {!_.isEmpty(this.state.childSVG) && (
+              <StatVarGroupSection
+                path={this.props.path}
+                data={childSVG}
+                pathToSelection={this.props.pathToSelection}
+                highlightedStatVar={this.highlightedStatVar}
+                entities={this.props.entities}
+                showAllSV={this.props.showAllSV}
+                expandedPath={this.props.expandedPath}
+                numEntitiesExistence={this.props.numEntitiesExistence}
+                dataSource={this.props.dataSource}
+              />
+            )}
+          </>
+        </Collapsible>
+      </>
+    );
+  }
+
+  private fetchData(): void {
+    this.dataAbortController?.abort();
+    this.dataAbortController = new AbortController();
+    const entityList = this.props.entities;
+    this.dataFetchingEntities = this.props.entities;
+    let numEntitiesExistence = this.props.numEntitiesExistence;
+    // When dataSource is specified, the stat var group node info fetch should
+    // also be constrained by the data source. So adding the data source dcid
+    // to the `entities` list for this purpose.
+    const entityDcids = entityList.map((entity) => entity.dcid);
+    if (this.props.dataSource) {
+      entityDcids.push(this.props.dataSource);
+      numEntitiesExistence = entityDcids.length;
+    }
+    this.setState({ isLoading: true });
+    axios
+      .post(
+        getUrlWithSearchParamsToPropagate("/api/variable-group/info"),
+        {
+          dcid: this.props.data.id,
+          entities: entityDcids,
+          numEntitiesExistence,
+        },
+        { signal: this.dataAbortController.signal }
+      )
+      .then((resp) => {
+        const data = resp.data;
+        const childSV: StatVarInfo[] = data["childStatVars"] || [];
+        const childSVG: StatVarGroupInfo[] = data["childStatVarGroups"] || [];
+        this.dataFetchingEntities = null;
+        if (_.isEqual(entityList, this.props.entities)) {
+          this.setState({
+            childSV,
+            childSVG,
+            dataFetchedEntities: entityList,
+            isLoading: false,
+          });
+        }
+      })
+      .catch((error) => {
+        if (axios.isCancel(error) || error.name === "AbortError") {
+          return;
+        }
+        this.dataFetchingEntities = null;
+        if (_.isEqual(entityList, this.props.entities)) {
+          this.setState({
+            errorMessage: "Error retrieving stat var group children",
+            dataFetchedEntities: entityList,
+            isLoading: false,
+          });
+        }
+      });
+  }
+
+  private scrollToHighlighted(): void {
+    clearTimeout(this.delayTimer);
+    this.delayTimer = setTimeout(() => {
+      if (this.highlightedStatVar.current !== null) {
+        const rect = this.highlightedStatVar.current.getBoundingClientRect();
+        if (rect.top < 0 || rect.top > window.innerHeight) {
+          this.highlightedStatVar.current.scrollIntoView({
+            behavior: "smooth",
+          });
+        }
+      }
+    }, SCROLL_DELAY);
+  }
+
+  private getIsNodeOpen(
+    prevProps: StatVarGroupNodePropType,
+    newSelectionCount: number
+  ): boolean {
+    // A parent component may open a node when either the selection path or
+    // expanded path has changed.
+    const openedByParent =
+      (!_.isEqual(prevProps.pathToSelection, this.props.pathToSelection) ||
+        !_.isEqual(prevProps.expandedPath, this.props.expandedPath)) &&
+      this.props.startsOpened;
+    // If this is a stat var hierarchy that wants the path to the selected
+    // statistical variable expanded, then if the selection count for this node
+    // increases, we want to open this node
+    const openedByNewSelection =
+      INITIAL_EXPANSION_TYPES.includes(this.context.statVarHierarchyType) &&
+      newSelectionCount > this.state.selectionCount;
+    // If this node is already open, keep it open
+    return openedByParent || openedByNewSelection || this.state.isOpen;
+  }
+}
+
+StatVarGroupNode.contextType = Context;

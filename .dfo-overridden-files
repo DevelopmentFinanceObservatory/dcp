@@ -1,0 +1,18 @@
+# DFO seam file map — consumed by 'just check-overrides'
+# Maps each upstream file that carries DFO hooks to its DFO seam target.
+# Format: <upstream_file> -> <dfo_seam_target>
+#
+# When upstream changes any of these files, check-overrides will warn so the
+# DFO seam targets can be reviewed and updated to stay in sync.
+
+# run.sh carries guarded line for the DFO prototyping app:
+#   [ -f /workspace/custom_dc/dfo/start.sh ] && source /workspace/custom_dc/dfo/start.sh
+build/cdc_services/run.sh -> custom_dc/dfo/start.sh
+
+# nginx.conf carries one glob include:
+#   include /workspace/custom_dc/*/nginx-*.conf;
+build/cdc_services/nginx.conf -> custom_dc/dfo/nginx-app.conf
+
+# Dockerfile carries one sentinel-bracketed build stage + COPY blocks into the runner:
+# dfo-dcp (Next.js prototypes app)
+build/cdc_services/Dockerfile -> custom_dc/dfo/prototypes/ (dfo-dcp build stage)

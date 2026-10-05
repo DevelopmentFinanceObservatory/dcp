@@ -1,0 +1,4 @@
+stat-var-host:8080:
+  - /stat-var/*
+default-host:8080:
+  - /*

@@ -1,0 +1,35 @@
+{
+  "childEntityType": "State",
+  "classifications": [
+    {
+      "ranking_type": [
+        1
+      ],
+      "type": 2
+    },
+    {
+      "contained_in_place_type": "State",
+      "had_default_type": false,
+      "type": 4
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [],
+  "comparisonVariables": [],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "country/USA"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "dc/topic/StudentPopulation",
+    "Count_Person_EducationalAttainmentDoctorateDegree",
+    "dc/topic/StudentsInCollege",
+    "dc/topic/Education",
+    "Count_Person_25OrMoreYears_DoctorateDegree_AsFractionOf_Count_Person_25OrMoreYears",
+    "dc/topic/Jobs"
+  ]
+}

@@ -1,0 +1,401 @@
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Module for NL page variable"""
+
+from dataclasses import dataclass
+from dataclasses import field
+import re
+from typing import Dict, List, Set, Tuple
+
+from flask import current_app
+
+from server.lib.feature_flags import ENABLE_NL_V2NODE_FETCHALL
+from server.lib.feature_flags import is_feature_enabled
+import server.lib.fetch as fetch
+import server.lib.nl.common.constants as constants
+import server.lib.nl.common.topic as topic
+import server.lib.nl.common.utils as utils
+from server.lib.nl.explore.params import DCNames
+import server.lib.shared as shared
+import server.services.datacommons as dc
+
+# Have an upper limit so we don't do too many existence checks.
+EXTENSION_SV_PRE_EXISTENCE_CHECK_LIMIT = 50
+# This is the number that we want to fit in a bar chart.
+EXTENSION_SV_POST_EXISTENCE_CHECK_LIMIT = 15
+
+DEFAULT_MAX_PAGES = 1
+
+
+def _get_max_pages() -> int | None:
+  """Returns the max pages to fetch based on the fetchall feature flag."""
+  return None if is_feature_enabled(
+      ENABLE_NL_V2NODE_FETCHALL) else DEFAULT_MAX_PAGES
+
+
+@dataclass
+class SV:
+  id: str
+  mp: str = ''
+  st: str = ''
+  pt: str = ''
+  md: str = ''
+  mq: str = ''
+  pvs: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class SVG:
+  pt: str = ''
+  pvs: Dict[str, str] = field(default_factory=dict)
+  p: str = ''
+
+
+def parse_sv(id: str, sv_definition: str) -> SV:
+  res = SV(id=id)
+  if not sv_definition:
+    return res
+  parts = sv_definition.split(",")
+  for part in parts:
+    if "=" not in part:
+      continue
+    k, v = part.split("=", 1)
+    if k == "pt":
+      res.pt = v
+    elif k == "mp":
+      res.mp = v
+    elif k == "st":
+      res.st = v
+    elif k == "md":
+      res.md = v
+    elif k == "mq":
+      res.mq = v
+    else:
+      res.pvs[k] = v
+  return res
+
+
+def parse_svg(svg_dcid: str) -> SVG:
+  res = SVG()
+  body = svg_dcid[len("dc/g/"):]
+  parts = body.split("_")
+  if len(parts) == 1:
+    return res
+  res.pt = parts[0]
+  for part in parts[1:]:
+    if "-" in part:
+      p, v = part.split("-")
+      p_lower = p.replace(p[0], p[0].lower(), 1)
+      res.pvs[p_lower] = v
+    else:
+      res.p = part.replace(part[0], part[0].lower(), 1)
+  return res
+
+
+# Given an SV object and SV info from DC API, check whether
+# their definitions are compatible.
+def _is_compatible(sv_obj: SV, new_sv: Dict) -> bool:
+  if 'definition' not in new_sv:
+    return False
+  new_sv_obj = parse_sv(new_sv['id'], new_sv['definition'])
+  if new_sv_obj.mp != sv_obj.mp:
+    return False
+  st_obj = sv_obj.st if sv_obj.st else constants.DEFAULT_STAT_TYPE
+  st_new = new_sv_obj.st if new_sv_obj.st else constants.DEFAULT_STAT_TYPE
+  if st_new != st_obj:
+    return False
+  if new_sv_obj.pt != sv_obj.pt:
+    return False
+  if new_sv_obj.md != sv_obj.md:
+    return False
+  if new_sv_obj.mq != sv_obj.mq:
+    return False
+  if len(new_sv_obj.pvs) != len(sv_obj.pvs):
+    return False
+  return True
+
+
+# Limit to up to `limit` extended SVs.
+def limit_extended_svs(sv: str, ext_svs: Set[str], limit: int) -> Dict:
+  # Put the main SV first.
+  res = [sv]
+  if sv in ext_svs:
+    ext_svs.remove(sv)
+  res.extend(sorted(ext_svs)[:limit])
+  return res
+
+
+def _fetch_indirect_siblings(
+    svs_needing_indirect: List[str], sv2svg: Dict[str, str]
+) -> Tuple[Dict[str, str], Dict[str, List[str]], Dict[str, List[Dict]]]:
+  """Fetches indirect siblings (parent SVG -> sibling SVGs -> sibling SVs)."""
+  # Batch 1: Fetch parents for all identified SVGs
+  svgs_to_expand = list({sv2svg[sv] for sv in svs_needing_indirect})
+  parents_resp = {}
+  max_pages = _get_max_pages()
+  if svgs_to_expand:
+    parents_resp = fetch.property_values(svgs_to_expand,
+                                         "specializationOf",
+                                         True,
+                                         max_pages=max_pages)
+
+  # Collect parents
+  svg_to_parent = {}
+  all_parents = []
+  for sv in svs_needing_indirect:
+    svg = sv2svg[sv]
+    parents = parents_resp.get(svg, [])
+    if parents:
+      svg_to_parent[svg] = parents[0]
+      all_parents.append(parents[0])
+
+  # Batch 2: Fetch siblings for all parents
+  siblings_resp = {}
+  if all_parents:
+    siblings_resp = fetch.property_values(all_parents,
+                                          "specializationOf",
+                                          False,
+                                          max_pages=max_pages)
+
+  # Collect all sibling SVGs
+  parent_to_siblings = {}
+  all_sibling_svgs = set()
+  for parent in all_parents:
+    siblings = siblings_resp.get(parent, [])
+    parent_to_siblings[parent] = siblings
+    all_sibling_svgs.update(siblings)
+
+  # Batch 3: Fetch variable group info for all sibling SVGs
+  svg_siblings_info = {'data': []}
+  if all_sibling_svgs:
+    svg_siblings_info = dc.get_variable_group_info(list(all_sibling_svgs), [],
+                                                   include_definitions=True)
+
+  # Map from sibling SVG to its children for quick lookup
+  svg_to_children = {}
+  for item in svg_siblings_info.get('data', []):
+    svg_to_children[item['node']] = item.get('info',
+                                             {}).get('childStatVars', [])
+
+  return svg_to_parent, parent_to_siblings, svg_to_children
+
+
+def extend_svs(svs: List[str]):
+  """Extend stat vars by finding siblings.
+
+    Each SV has a parent SVG associated. Extending an SV would need to trace to
+    its parent SVG.
+
+    There are two types of SVGs:
+
+    1)
+    https://datacommons.org/browser/dc/g/Person_Gender-Female_Race-AsianAlone,
+    which has same set of PVs as its child SV. In this case, its child SVs are
+    not siblings as they differ by stat type or other properties. To find
+    siblings of a child SV, it's really a task to find this SVG's sibling
+    SVGs and get corresponding child SV from each of them.
+
+    2) https://datacommons.org/browser/dc/g/Person_Gender-Female_Race, which has
+    PVs and an EXTRA P, so this represents a set of SVs, its child SVs can be
+    directly used as siblings.
+  """
+  if not svs:
+    return {}
+  max_pages = _get_max_pages()
+  sv2svgs = fetch.property_values(svs, "memberOf", True, max_pages=max_pages)
+  sv2svg = {sv: svg[0] for sv, svg in sv2svgs.items() if svg}
+  svg2childsvs = {}
+  if not sv2svg:
+    return {}
+  svginfo = dc.get_variable_group_info(list(sv2svg.values()), [],
+                                       include_definitions=True)
+  if 'data' not in svginfo:
+    return {}
+  for item in svginfo['data']:
+    svg2childsvs[item['node']] = item['info'].get('childStatVars', [])
+
+  res = {}
+  # Extended SV member -> Extended SV list
+  reverse_map = {}
+
+  # Maps to store parsed objects (to avoid re-parsing)
+  sv_to_svg_obj = {}
+  sv_to_sv_obj = {}
+
+  # SVs that need indirect sibling expansion
+  svs_needing_indirect = []
+
+  # First Pass: Parse and identify candidates
+  for sv, svg in sv2svg.items():
+    svg_obj = parse_svg(svg)
+    sv_to_svg_obj[sv] = svg_obj
+
+    sv_obj = None
+    for child_sv in svg2childsvs.get(svg, []):
+      if child_sv['id'] == sv:
+        if 'definition' in child_sv:
+          sv_obj = parse_sv(child_sv['id'], child_sv['definition'])
+        break
+    if not sv_obj:
+      continue
+    sv_to_sv_obj[sv] = sv_obj
+
+    if len(svg_obj.pvs) == len(sv_obj.pvs):
+      svs_needing_indirect.append(sv)
+
+  # Extract batch fetching logic into a helper
+  svg_to_parent, parent_to_siblings, svg_to_children = _fetch_indirect_siblings(
+      svs_needing_indirect, sv2svg)
+
+  # Final Pass: Process results
+  for sv, svg in sv2svg.items():
+    if sv in reverse_map:
+      res[sv] = reverse_map[sv]
+      continue
+
+    res[sv] = []
+    if sv not in sv_to_sv_obj:
+      continue
+    sv_obj = sv_to_sv_obj[sv]
+    svg_obj = sv_to_svg_obj[sv]
+
+    if sv in svs_needing_indirect:
+      # Use batched data for indirect siblings
+      parent = svg_to_parent.get(svg)
+      if not parent:
+        continue
+      siblings = parent_to_siblings.get(parent, [])
+      for sib_svg in siblings:
+        for sv_info in svg_to_children.get(sib_svg, []):
+          if _is_compatible(sv_obj, sv_info):
+            res[sv].append(sv_info['id'])
+    else:
+      # Can use the direct siblings of this sv, nevertheless perform
+      # SV compatibility check!
+      for new_sv_info in svg2childsvs.get(svg, []):
+        if _is_compatible(sv_obj, new_sv_info):
+          res[sv].append(new_sv_info['id'])
+    for sv2 in res[sv]:
+      if sv2 == sv:
+        continue
+      reverse_map[sv2] = res[sv]
+
+  # Limit the number of extended SVs.
+  res_ordered = {}
+  for sv, ext_svs in res.items():
+    res_ordered[sv] = limit_extended_svs(
+        sv, set(ext_svs), EXTENSION_SV_PRE_EXISTENCE_CHECK_LIMIT)
+  return res_ordered
+
+
+def get_sv_name(all_svs: List[str],
+                sv_chart_titles: Dict,
+                dc: str = DCNames.MAIN_DC.value) -> Dict:
+  max_pages = _get_max_pages()
+  sv2name_raw = fetch.property_values(all_svs, 'name', max_pages=max_pages)
+  uncurated_names = {
+      sv: names[0] if names else sv for sv, names in sv2name_raw.items()
+  }
+
+  sv_name_map = {}
+  # If a curated name is found (key exists + value non-empty)
+  # return that, Else return the name property for SV.
+  for sv in all_svs:
+    if topic.TOPIC_NAMES_OVERRIDE.get(sv):
+      sv_name_map[sv] = topic.TOPIC_NAMES_OVERRIDE[sv]
+    elif topic.SVPG_NAMES_OVERRIDE.get(sv):
+      sv_name_map[sv] = topic.SVPG_NAMES_OVERRIDE[sv]
+    elif constants.SV_DISPLAY_NAME_OVERRIDE.get(sv):
+      sv_name_map[sv] = constants.SV_DISPLAY_NAME_OVERRIDE[sv]
+    elif sv_chart_titles.get(sv) and not dc in sv_chart_titles[sv].get(
+        'blocklist', []):
+      sv_name_map[sv] = sv_chart_titles[sv].get('title', '')
+    else:
+      # Topic and SVPG have a cache, so lookup name from there if its
+      # fresher.
+      if ('TOPIC_CACHE' in current_app.config and
+          dc in current_app.config['TOPIC_CACHE'] and
+          (utils.is_svpg(sv) or utils.is_topic(sv))):
+        sv_name_map[sv] = current_app.config['TOPIC_CACHE'][dc].get_name(sv)
+        if not sv_name_map[sv]:
+          # Very rare edge case.
+          sv_name_map[sv] = uncurated_names.get(sv) or sv.replace(
+              'dc/topic/', '').replace('dc/svpg/', '')
+      else:
+        sv_name_map[sv] = uncurated_names[sv]
+
+  return sv_name_map
+
+
+def get_sv_unit(all_svs: List[str]) -> Dict:
+  sv_unit_map = {}
+  for sv in all_svs:
+    # If the dcid has "percent", the unit should be "%"
+    if "Percent" in sv:
+      sv_unit_map[sv] = "%"
+    else:
+      sv_unit_map[sv] = ""
+  return sv_unit_map
+
+
+def get_sv_description(all_svs: List[str]) -> Dict:
+  max_pages = _get_max_pages()
+  sv2desc_dc = fetch.property_values(all_svs,
+                                     'description',
+                                     max_pages=max_pages)
+  sv2desc_dc = {sv: desc[0] if desc else '' for sv, desc in sv2desc_dc.items()}
+  sv_desc_map = {}
+  for sv in all_svs:
+    if sv in topic.TOPIC_AND_SVPG_DESC_OVERRIDE:
+      sv_desc_map[sv] = topic.TOPIC_AND_SVPG_DESC_OVERRIDE[sv]
+    elif sv in constants.SV_DISPLAY_DESCRIPTION_OVERRIDE:
+      sv_desc_map[sv] = constants.SV_DISPLAY_DESCRIPTION_OVERRIDE.get(sv, '')
+    else:
+      sv_desc_map[sv] = sv2desc_dc[sv]
+  return sv_desc_map
+
+
+def get_sv_footnote(all_svs: List[str]) -> Dict:
+  max_pages = _get_max_pages()
+  sv2footnote_raw = fetch.property_values(all_svs,
+                                          'footnote',
+                                          max_pages=max_pages)
+  uncurated_footnotes = {
+      sv: footnotes[0] if footnotes else ''
+      for sv, footnotes in sv2footnote_raw.items()
+  }
+  sv_map = {}
+  for sv in all_svs:
+    if sv in constants.SV_DISPLAY_FOOTNOTE_OVERRIDE:
+      sv_map[sv] = constants.SV_DISPLAY_FOOTNOTE_OVERRIDE[sv]
+    else:
+      sv_map[sv] = uncurated_footnotes[sv]
+  return sv_map
+
+
+def get_only_svs(svs: List[str]) -> List[str]:
+  ret = []
+  for sv in svs:
+    if utils.is_sv(sv):
+      ret.append(sv)
+  return ret
+
+
+#
+# Per-capita handling
+#
+
+
+def is_percapita_relevant(sv_dcid: str, nopc_svs: Set[str]) -> bool:
+  return shared.is_percapita_relevant(sv_dcid, nopc_svs)

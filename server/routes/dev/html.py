@@ -1,0 +1,43 @@
+# Copyright 2020 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import flask
+
+from shared.lib.utils import is_production_env
+
+# Define blueprint
+bp = flask.Blueprint("dev", __name__, url_prefix='/dev')
+
+
+@bp.route('/')
+def dev():
+  if is_production_env():
+    flask.abort(404)
+  return flask.render_template('dev/dev.html')
+
+
+@bp.route('/subject-page-tiles')
+def subject_page_tiles():
+  if is_production_env():
+    flask.abort(404)
+  return flask.render_template('dev/subject_page_tiles.html',
+                               maps_api_key=flask.current_app.config.get(
+                                   'MAPS_API_KEY', ''))
+
+
+@bp.route('/facet-examples')
+def facet_examples():
+  if is_production_env():
+    flask.abort(404)
+  return flask.render_template('dev/facet_examples.html')

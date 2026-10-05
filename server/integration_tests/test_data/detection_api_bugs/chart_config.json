@@ -1,0 +1,32 @@
+{
+  "childEntityType": "",
+  "classifications": [
+    {
+      "correlation": true,
+      "type": 5
+    },
+    {
+      "contained_in_place_type": "DefaultType",
+      "had_default_type": true,
+      "type": 4
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [],
+  "comparisonVariables": [
+    "dc/topic/HousesByHomeValue"
+  ],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "geoId/06"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "Count_HousingUnit",
+    "dc/topic/HousesByRoomCount",
+    "dc/topic/Housing"
+  ]
+}

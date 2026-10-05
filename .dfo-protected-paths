@@ -1,0 +1,24 @@
+# DFO-protected paths — consumed by 'just sync-resolve'
+# Conflicts in these paths are flagged for manual review instead of auto-resolved to upstream.
+# Format: one path per line; directory prefixes end with /
+
+# DFO application and configuration
+custom_dc/dfo/
+
+# Seam files: DFO hooks are baked into these upstream files
+build/cdc_services/Dockerfile
+build/cdc_services/run.sh
+build/cdc_services/nginx.conf
+
+# Repo-level DFO files
+justfile
+.dockerignore
+.gcloudignore
+.dfo-protected-paths
+.dfo-overridden-files
+
+# CI/deploy workflows and deploy docs are DFO-owned even though they live
+# under upstream-owned directories (.github/, deploy/); an upstream file
+# colliding on a name we use here must not auto-resolve to upstream's version.
+.github/workflows/
+deploy/README.md

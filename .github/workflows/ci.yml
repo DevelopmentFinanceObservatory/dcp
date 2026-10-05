@@ -1,0 +1,25 @@
+name: CI
+
+# ONE/DFO: runs checks.yml (the DFO-owned lint/typecheck/test jobs) on pull
+# requests into dev and main and on push to dev. main is the prod branch in
+# the DevelopmentFinanceObservatory org, where sync PRs need this check.
+#
+# Does not build the Docker image. build/cdc_services/Dockerfile compiles
+# the Go mixer, builds two Python venvs, and runs a Next.js production
+# build across four stages -- several minutes even with cache, so it only
+# runs on push to a deploy branch, in deploy-dev.yml and deploy-prod.yml,
+# with a registry-backed cache to keep that path fast.
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml

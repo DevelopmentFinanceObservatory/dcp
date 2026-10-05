@@ -1,0 +1,43 @@
+{
+  "childEntityType": "",
+  "classifications": [
+    {
+      "type": 100
+    }
+  ],
+  "client": "test_detect",
+  "comparisonEntities": [
+    "geoId/06001"
+  ],
+  "comparisonVariables": [],
+  "context": {},
+  "debug": {},
+  "entities": [
+    "geoId/06085"
+  ],
+  "nonPlaceEntities": [],
+  "properties": [],
+  "sessionId": "007_999999999",
+  "variables": [
+    "Median_Income_Person",
+    "Median_Income_Household",
+    "Median_Earnings_Person",
+    "Median_Income_Person_15OrMoreYears_Male_WithIncome",
+    "Mean_Income_Household",
+    "Median_Income_Person_15OrMoreYears_Female_WithIncome",
+    "Median_Income_Household_FamilyHousehold",
+    "Median_Earnings_Person_Male",
+    "Median_Income_Household_MarriedCoupleFamilyHousehold",
+    "dc/topic/MedianHouseholdIncomeByGender",
+    "Median_Income_Person_18OrMoreYears_Civilian_WithIncome",
+    "Median_Income_Household_NonfamilyHousehold",
+    "dc/topic/MedianHouseholdIncomeByRace",
+    "Median_Income_Household_HouseholderRaceWhiteAlone",
+    "Median_Earnings_Person_Female",
+    "Mean_Income_Household_FamilyHousehold",
+    "dc/topic/IndividualIncomeDistribution",
+    "Median_Income_Person_25OrMoreYears_EducationalAttainmentSomeCollegeOrAssociatesDegree_WithIncome",
+    "Median_Income_Person_25OrMoreYears_EducationalAttainmentBachelorsDegree_WithIncome",
+    "Median_Income_Person_25OrMoreYears_EducationalAttainmentLessThanHighSchoolGraduate_WithIncome"
+  ]
+}
