@@ -99,6 +99,9 @@ if [[ $USE_SPANNER_GRAPH == "true" ]]; then
         "--use_spanner_graph=true"
         "--feature_flags_path=deploy/featureflags/dcp.yaml"
         "--host_project=$GCP_PROJECT_ID"
+        # Embed query terms in the service's own region. Mixer otherwise calls
+        # us-central1, whose shared Vertex AI capacity returns 429s under load.
+        "--genai_client_location=${GENAI_CLIENT_LOCATION:-$REGION}"
     )
 fi
 
