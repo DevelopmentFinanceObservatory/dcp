@@ -28,7 +28,7 @@ Cloud Run :8080
 1. A `dfo-dcp` Docker build stage (`FROM node:20`) runs `npm ci` and `next build` in `custom_dc/dfo/prototypes/`, producing a standalone bundle at `.next/standalone/`.
 2. Three `COPY --from=dfo-dcp` lines in the runner stage copy `standalone/`, `.next/static/`, and `public/` into `/workspace/custom_dc/dfo/prototypes/`.
 3. `start.sh` is sourced by `run.sh` just before `wait -n`. It starts the standalone server (`node /workspace/custom_dc/dfo/prototypes/server.js`) under a self-restarting supervisor subshell.
-4. `nginx-app.conf` is included by `nginx.conf` via glob (`include …/nginx-*.conf;`) and adds the `/prototype`, `/api/search/`, and `/api/datasets` location blocks.
+4. `nginx-app.conf` is included by `nginx.conf` via glob (`include …/nginx-*.conf;`) and adds the `/prototype`, `/api/search/`, and `/api/datasets` location blocks and turns on gzip (level 1) for JSON, CSV, and SDMX CSV responses.
 
 The search API backend is deployed independently in [dfo-apis](https://github.com/ONEcampaign/dfo-apis).
 
@@ -294,7 +294,7 @@ A crash in a DC service (mixer, website, NL, or MCP) still hits `wait -n` and ex
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `env.list.sample` | template for `env.list`; fill in and copy, never commit                                                                          |
 | `start.sh`        | sourced by `run.sh`; starts the Next standalone server in its own restart-loop subshell                                          |
-| `nginx-app.conf`  | included by `nginx.conf`; proxies `/prototype`+`/prototype/`, `/api/search/`, and `/api/datasets` to Next on :3000, and redirects legacy `/app` paths to `/prototype` |
+| `nginx-app.conf`  | included by `nginx.conf`; proxies `/prototype`+`/prototype/`, `/api/search/`, and `/api/datasets` to Next on :3000, redirects legacy `/app` paths to `/prototype`, and gzips JSON, CSV, and SDMX CSV responses |
 | `prototypes/`     | the Next.js app — see below                                                                                                      |
 
 ### `custom_dc/dfo/prototypes/`
