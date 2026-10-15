@@ -1,8 +1,7 @@
 name: CI
 
 # ONE/DFO: runs checks.yml (the DFO-owned lint/typecheck/test jobs) on pull
-# requests into dev and main. main is the prod branch in the
-# DevelopmentFinanceObservatory org, where sync PRs need this check.
+# requests into dev and main.
 #
 # A draft pull request runs nothing; marking it ready starts the run. A push
 # to dev has no run here, because deploy-dev.yml runs checks.yml on the merged
