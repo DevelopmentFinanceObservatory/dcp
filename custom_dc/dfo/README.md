@@ -30,7 +30,7 @@ Cloud Run :8080
 3. `start.sh` is sourced by `run.sh` just before `wait -n`. It starts the standalone server (`node /workspace/custom_dc/dfo/prototypes/server.js`) under a self-restarting supervisor subshell.
 4. `nginx-app.conf` is included by `nginx.conf` via glob (`include …/nginx-*.conf;`) and adds the `/prototype`, `/api/search/`, and `/api/datasets` location blocks and turns on gzip (level 1) for JSON, CSV, and SDMX CSV responses.
 
-The search API backend is deployed independently in [dfo-apis](https://github.com/ONEcampaign/dfo-apis).
+The search API backend is deployed independently in [apis](https://github.com/DevelopmentFinanceObservatory/apis).
 
 ### Seam philosophy
 
