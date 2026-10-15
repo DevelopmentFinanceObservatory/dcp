@@ -4,18 +4,22 @@ name: Build and pin
 # and pushes the dcp image, then opens a PR in the infra repo that moves the
 # Terraform image pin. dcp's Cloud Run service lives inside a pinned upstream
 # Terraform module, so its image is a Terraform-managed attribute. Unlike
-# dfo-ai and dfo-apis, this repo can't deploy with `gcloud run services
+# ai and apis, this repo can't deploy with `gcloud run services
 # update`, since the next `terraform apply` would revert it. The infra repo's
 # own apply-on-merge does the deploy once the pin PR lands.
 #
+# The pin PR goes to DevelopmentFinanceObservatory/infra, into the branch the
+# caller names in `infra-base`: dev pins land on infra `dev`, prod pins on
+# infra `main`.
+#
 # The job declares the caller's environment, which supplies every GCP name
 # (vars.REGION, vars.PROJECT_ID, vars.AR_REPO, vars.AR_CACHE_REPO,
-# vars.DFO_APIS_BASE_URL), the WIF_PROVIDER/WIF_SA secrets, and the pair for the
+# vars.DFO_SITE_ORIGIN), the WIF_PROVIDER/WIF_SA secrets, and the pair for the
 # GitHub App that opens the pin PR. A caller job that uses a reusable workflow
 # cannot declare an environment, so it cannot hand environment-level values
 # down. The caller names its App in the `app` input and the job reads only that
 # App's pair:
-#   dfo-bot:     secrets.DEPLOY_APP_ID, secrets.DEPLOY_APP_PRIVATE_KEY (dev)
+#   dfo-pin:     vars.PIN_APP_CLIENT_ID, secrets.PIN_APP_PRIVATE_KEY (dev)
 #   dfo-release: vars.RELEASE_APP_CLIENT_ID, secrets.RELEASE_APP_PRIVATE_KEY (production)
 # A called workflow sees no secrets, its environment's included, unless the
 # caller passes them, so each caller uses `secrets: inherit`.
@@ -35,12 +39,8 @@ on:
         description: The only branch this workflow pins from.
         required: true
         type: string
-      infra-owner:
-        description: Owner of the infra repo that receives the pin PR.
-        required: true
-        type: string
-      infra-repo:
-        description: Name of the infra repo that receives the pin PR.
+      infra-base:
+        description: The infra branch the pin PR targets (dev, main).
         required: true
         type: string
       auto-merge:
@@ -48,7 +48,7 @@ on:
         required: true
         type: boolean
       app:
-        description: The GitHub App that opens the pin PR (dfo-bot, dfo-release).
+        description: The GitHub App that opens the pin PR (dfo-pin, dfo-release).
         required: true
         type: string
 
@@ -70,7 +70,10 @@ jobs:
       # is the only writer on AR_CACHE_REPO.
       CACHE_PATH: ${{ vars.REGION }}-docker.pkg.dev/${{ vars.PROJECT_ID }}/${{ vars.AR_CACHE_REPO }}/dfo-services-image
       TIER: ${{ inputs.tier }}
-      INFRA_REPO: ${{ inputs.infra-owner }}/${{ inputs.infra-repo }}
+      INFRA_OWNER: DevelopmentFinanceObservatory
+      INFRA_NAME: infra
+      INFRA_REPO: DevelopmentFinanceObservatory/infra
+      INFRA_BASE: ${{ inputs.infra-base }}
     steps:
       # Runs before authentication, so a missing variable or secret fails here
       # with its name, not as an empty input inside an action or a failed Next
@@ -83,19 +86,19 @@ jobs:
           PROJECT_ID: ${{ vars.PROJECT_ID }}
           AR_REPO: ${{ vars.AR_REPO }}
           AR_CACHE_REPO: ${{ vars.AR_CACHE_REPO }}
-          DFO_APIS_BASE_URL: ${{ vars.DFO_APIS_BASE_URL }}
+          DFO_SITE_ORIGIN: ${{ vars.DFO_SITE_ORIGIN }}
           WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
           WIF_SA: ${{ secrets.WIF_SA }}
-          DEPLOY_APP_ID: ${{ secrets.DEPLOY_APP_ID }}
-          DEPLOY_APP_PRIVATE_KEY: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          PIN_APP_CLIENT_ID: ${{ vars.PIN_APP_CLIENT_ID }}
+          PIN_APP_PRIVATE_KEY: ${{ secrets.PIN_APP_PRIVATE_KEY }}
           RELEASE_APP_CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
           RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
         run: |
-          required="REGION PROJECT_ID AR_REPO AR_CACHE_REPO DFO_APIS_BASE_URL WIF_PROVIDER WIF_SA"
+          required="REGION PROJECT_ID AR_REPO AR_CACHE_REPO DFO_SITE_ORIGIN WIF_PROVIDER WIF_SA"
           case "$APP" in
-            dfo-bot) required="$required DEPLOY_APP_ID DEPLOY_APP_PRIVATE_KEY" ;;
+            dfo-pin) required="$required PIN_APP_CLIENT_ID PIN_APP_PRIVATE_KEY" ;;
             dfo-release) required="$required RELEASE_APP_CLIENT_ID RELEASE_APP_PRIVATE_KEY" ;;
-            *) echo "::error::Unknown app '$APP'; expected dfo-bot or dfo-release."; exit 1 ;;
+            *) echo "::error::Unknown app '$APP'; expected dfo-pin or dfo-release."; exit 1 ;;
           esac
           missing=""
           for v in $required; do
@@ -180,12 +183,12 @@ jobs:
           # on the rare commits that move the submodule, and the website SHA is
           # already recoverable from the image tag.
           #
-          # DFO_APIS_BASE_URL is the dfo-apis origin next.config.mjs bakes into
+          # DFO_SITE_ORIGIN is the website origin next.config.mjs bakes into
           # the /api/search and /api/datasets rewrites. The Next build stage
           # fails when it is empty.
           build-args: |
             MIXER_HASH=${{ steps.target.outputs.mixer_hash }}
-            DFO_APIS_BASE_URL=${{ vars.DFO_APIS_BASE_URL }}
+            DFO_SITE_ORIGIN=${{ vars.DFO_SITE_ORIGIN }}
           # Registry-backed cache, not GHA's own cache backend, which is
           # capped and evicted too aggressively for this build. mode=max
           # caches every intermediate layer, so the mixer and Next.js build
@@ -211,25 +214,17 @@ jobs:
       # condition -- both restrict this job to running for deploy-branch at
       # all. This `if` is belt-and-braces on top of that, guarding the mint,
       # checkout, and pin steps that touch the App token and the infra repo.
-      - name: Mint infra repo app token (dfo-bot)
-        id: app-token-bot
-        if: inputs.app == 'dfo-bot' && github.ref == format('refs/heads/{0}', inputs.deploy-branch)
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ secrets.DEPLOY_APP_ID }}
-          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
-          owner: ${{ inputs.infra-owner }}
-          repositories: ${{ inputs.infra-repo }}
-
-      - name: Mint infra repo app token (dfo-release)
-        id: app-token-release
-        if: inputs.app == 'dfo-release' && github.ref == format('refs/heads/{0}', inputs.deploy-branch)
+      # The check step above has already failed the job if the named App's
+      # pair is unset, so each expression resolves to that App's value.
+      - name: Mint the infra repo App token
+        id: app-token
+        if: github.ref == format('refs/heads/{0}', inputs.deploy-branch)
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ inputs.infra-owner }}
-          repositories: ${{ inputs.infra-repo }}
+          client-id: ${{ inputs.app == 'dfo-pin' && vars.PIN_APP_CLIENT_ID || vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ inputs.app == 'dfo-pin' && secrets.PIN_APP_PRIVATE_KEY || secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ env.INFRA_OWNER }}
+          repositories: ${{ env.INFRA_NAME }}
           permission-contents: write
           permission-pull-requests: write
 
@@ -238,7 +233,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ${{ env.INFRA_REPO }}
-          token: ${{ steps.app-token-bot.outputs.token || steps.app-token-release.outputs.token }}
+          ref: ${{ inputs.infra-base }}
+          token: ${{ steps.app-token.outputs.token }}
           path: infra-repo
 
       - name: Rewrite the pin line
@@ -267,11 +263,11 @@ jobs:
             exit 1
           fi
 
-          # main can already carry this sha's pin (a redeploy, or a re-run
-          # after the previous run's PR merged), in which case sed matched
-          # nothing to change and there's no diff to commit.
+          # The base branch can already carry this sha's pin (a redeploy, or
+          # a re-run after the previous run's PR merged), in which case sed
+          # matched nothing to change and there's no diff to commit.
           if git diff --quiet -- "$TFVARS"; then
-            echo "::notice::main already pinned to this digest, nothing to commit"
+            echo "::notice::${INFRA_BASE} already pinned to this digest, nothing to commit"
             changed=false
           else
             changed=true
@@ -283,45 +279,15 @@ jobs:
             echo "title=chore(dcp): pin ${TIER} image to ${SHORT_SHA}"
           } >> "$GITHUB_OUTPUT"
 
-      # dfo-bot pushes a local commit, which dfo-infra's approve-image-pin.yml
-      # accepts as it is.
-      - name: Commit and push the pin (dfo-bot)
-        if: inputs.app == 'dfo-bot' && steps.rewrite.outputs.changed == 'true'
+      # The pin commit is built through the REST git database API ("Create a
+      # tree" and "Create a commit", docs.github.com/en/rest/git), so it is
+      # authored by the App and GitHub signs it. Its one parent is the base
+      # branch's head, and the pin branch is force-moved to it.
+      - name: Commit the pin through the API
+        if: steps.rewrite.outputs.changed == 'true'
         working-directory: infra-repo
         env:
-          TFVARS: ${{ steps.rewrite.outputs.tfvars }}
-          BRANCH: ${{ steps.rewrite.outputs.branch }}
-          TITLE: ${{ steps.rewrite.outputs.title }}
-        run: |
-          set -euo pipefail
-
-          git config user.name "dfo-dcp-deployer[bot]"
-          git config user.email "dfo-dcp-deployer[bot]@users.noreply.github.com"
-
-          git checkout -B "$BRANCH"
-          git add "$TFVARS"
-          git commit -m "$TITLE"
-
-          # Force-pushed to a single reused branch, so that if two runs'
-          # git operations ever interleave, the last writer wins instead of
-          # leaving push order to chance and risking a stale pin.
-          git push --force origin "HEAD:refs/heads/${BRANCH}"
-
-      # The new org's sync-guard accepts a pin commit only when its author and
-      # committer are dfo-release[bot], its signature verifies, and its one
-      # parent is the PR's base. GitHub signs a commit a GitHub App creates
-      # through the API when the request carries no author, committer, or
-      # signature ("Signature verification for bots", docs.github.com
-      # /en/authentication/managing-commit-signature-verification
-      # /about-commit-signature-verification). So this step builds the tree
-      # and the commit through the REST git database API ("Create a tree" and
-      # "Create a commit", docs.github.com/en/rest/git), naming main's head as
-      # the only parent, and force-moves the pin branch to it.
-      - name: Commit the pin through the API (dfo-release)
-        if: inputs.app == 'dfo-release' && steps.rewrite.outputs.changed == 'true'
-        working-directory: infra-repo
-        env:
-          GH_TOKEN: ${{ steps.app-token-release.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TFVARS: ${{ steps.rewrite.outputs.tfvars }}
           BRANCH: ${{ steps.rewrite.outputs.branch }}
           TITLE: ${{ steps.rewrite.outputs.title }}
@@ -345,17 +311,12 @@ jobs:
             exit 1
           fi
 
-          commit="$(jq -n --arg message "$TITLE" --arg tree "$tree" --arg parent "$parent" \
+          sha="$(jq -n --arg message "$TITLE" --arg tree "$tree" --arg parent "$parent" \
             '{message: $message, tree: $tree, parents: [$parent]}' |
-            gh api "repos/${INFRA_REPO}/git/commits" --input - \
-              --jq '[.sha, (.verification.verified | tostring), .verification.reason] | @tsv')"
-          IFS=$'\t' read -r sha verified reason <<<"$commit"
-          if [ "$verified" != "true" ]; then
-            echo "::error::GitHub did not verify pin commit $sha (reason: $reason), and sync-guard would reject it."
-            exit 1
-          fi
+            gh api "repos/${INFRA_REPO}/git/commits" --input - --jq .sha)"
 
-          # Force-moved, like the dfo-bot push, so the last run wins.
+          # Force-moved to a single reused branch, so that if two runs ever
+          # interleave, the last writer wins and no stale pin survives.
           if gh api "repos/${INFRA_REPO}/git/ref/heads/${BRANCH}" --silent 2>/dev/null; then
             gh api -X PATCH "repos/${INFRA_REPO}/git/refs/heads/${BRANCH}" \
               -f sha="$sha" -F force=true --silent
@@ -370,14 +331,13 @@ jobs:
         if: github.ref == format('refs/heads/{0}', inputs.deploy-branch)
         working-directory: infra-repo
         env:
-          GH_TOKEN: ${{ steps.app-token-bot.outputs.token || steps.app-token-release.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           CHANGED: ${{ steps.rewrite.outputs.changed }}
           BRANCH: ${{ steps.rewrite.outputs.branch }}
           TITLE: ${{ steps.rewrite.outputs.title }}
           IMAGE_REF: ${{ steps.digest.outputs.image }}
           TAG_REF: ${{ steps.target.outputs.image }}
           AUTO_MERGE: ${{ inputs.auto-merge }}
-          INFRA_NAME: ${{ inputs.infra-repo }}
         run: |
           set -euo pipefail
 
@@ -386,8 +346,7 @@ jobs:
             exit 0
           fi
 
-          # Opened with the App token minted above, never GITHUB_TOKEN.
-          # GitHub suppresses other workflow runs triggered by
+          # Opened with the App token minted above. GitHub suppresses other workflow runs triggered by
           # GITHUB_TOKEN-authored pushes and PRs, so the infra repo's required
           # status checks would never fire and the PR would sit unmergeable.
           BODY="Automated image pin from ${GITHUB_REPOSITORY}@${GITHUB_SHA}. Merging runs ${INFRA_NAME}'s apply-on-merge, which deploys this image to dfo-${TIER}."$'\n\n'"Digest (pinned): ${IMAGE_REF}"$'\n'"Tag (browsable): ${TAG_REF}"
@@ -395,7 +354,7 @@ jobs:
           pr_url=$(gh pr list --repo "$INFRA_REPO" --head "$BRANCH" --state open --json url --jq '.[0].url // empty')
           if [ -z "$pr_url" ]; then
             pr_url=$(gh pr create --repo "$INFRA_REPO" \
-              --base main \
+              --base "$INFRA_BASE" \
               --head "$BRANCH" \
               --title "$TITLE" \
               --body "$BODY")
@@ -410,9 +369,9 @@ jobs:
 
           # Auto-merge is armed here, with the App token, because a merge made
           # with GITHUB_TOKEN creates no workflow runs, so the infra repo's
-          # apply.yml would never fire on the merged pin. Arming it at
-          # PR-creation time is safe: auto-merge still waits on branch
-          # protection, which requires an approving review.
+          # apply.yml would never fire on the merged pin. Auto-merge waits on
+          # the base branch's ruleset: on infra `dev`, its required checks
+          # (`Changed stacks planned` among them), with no approval.
           if [ "$AUTO_MERGE" = "true" ]; then
             gh pr merge "$pr_url" --auto --squash
           fi
