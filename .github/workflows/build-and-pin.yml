@@ -183,7 +183,7 @@ jobs:
           # on the rare commits that move the submodule, and the website SHA is
           # already recoverable from the image tag.
           #
-          # DFO_APIS_BASE_URL is the dfo-apis origin next.config.mjs bakes into
+          # DFO_APIS_BASE_URL is the apis origin next.config.mjs bakes into
           # the /api/search and /api/datasets rewrites. The Next build stage
           # fails when it is empty.
           build-args: |
@@ -346,8 +346,7 @@ jobs:
             exit 0
           fi
 
-          # Opened with the App token minted above, never GITHUB_TOKEN.
-          # GitHub suppresses other workflow runs triggered by
+          # Opened with the App token minted above. GitHub suppresses other workflow runs triggered by
           # GITHUB_TOKEN-authored pushes and PRs, so the infra repo's required
           # status checks would never fire and the PR would sit unmergeable.
           BODY="Automated image pin from ${GITHUB_REPOSITORY}@${GITHUB_SHA}. Merging runs ${INFRA_NAME}'s apply-on-merge, which deploys this image to dfo-${TIER}."$'\n\n'"Digest (pinned): ${IMAGE_REF}"$'\n'"Tag (browsable): ${TAG_REF}"

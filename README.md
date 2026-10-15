@@ -26,7 +26,7 @@ just deploy                    # build and push a dfo-dev-<sha> image
 just DEPLOY_ENV=prod deploy    # build and push a dfo-prod-<sha> image
 ```
 
-`deploy` prints the command to run from the sibling `dfo-infra` repo, which applies it to Cloud Run. See [CONTRIBUTING-DFO.md](./CONTRIBUTING-DFO.md) for the full release flow.
+`deploy` prints the command to run from the sibling `infra` repo, which applies it to Cloud Run. See [CONTRIBUTING-DFO.md](./CONTRIBUTING-DFO.md) for the full release flow.
 
 ## Relationship to upstream
 

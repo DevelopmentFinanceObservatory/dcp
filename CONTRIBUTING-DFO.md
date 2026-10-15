@@ -11,11 +11,11 @@ Two kinds of code live here, and they behave differently.
 - **Upstream code.** Everything outside `custom_dc/` tracks datacommonsorg/website and the `mixer` and `import` submodules. We take changes from upstream; we do not write them here.
 - **ONE Data code.** Everything under `custom_dc/` is ours (for the DFO). `custom_dc/dfo/prototypes` is the frontend, and `custom_dc/api_server` holds a legacy copy of the Search API that stays until its removal PR lands. Upstream never touches these paths, so an upstream sync cannot conflict with work there.
 
-The repo builds one container image. A sibling repo, `dfo-infra`, deploys it to Cloud Run. This repo builds and pushes an image; `dfo-infra` runs it.
+The repo builds one container image. A sibling repo, `infra`, deploys it to Cloud Run. This repo builds and pushes an image, and `infra` runs it.
 
 ## Branch model
 
-Two branches, each mapped to one environment. Work flows up, never down.
+Two branches, each mapped to one environment. Work flows up from `dev` to `main`.
 
 - **`dev`.** Active development, and the default branch. Feature branches merge here, and upstream syncs land here first. Deploys to `dfo-dev`.
 - **`main`.** Production. Moved only by a reviewed PR from `dev`. Every commit on `main` is deployable.
@@ -34,8 +34,7 @@ The loop is short.
 1. Branch off `dev`. Name it `feat/<feature>`.
 
 2. Build the change, run the tests, open a PR into `dev`. `ci.yml` runs
-   typecheck and tests on the DFO-owned code paths (`custom_dc/dfo/prototypes`
-   and `custom_dc/api_server`).
+   typecheck and tests on `custom_dc/dfo/prototypes`.
 
 3. On merge, `deploy-dev.yml` builds the image, pushes it to Artifact
    Registry, and opens a PR into infra's `dev` branch that moves the
@@ -59,7 +58,7 @@ Merging upstream's website also moves the `mixer` and `import` submodule pointer
 
 ### Matching a Data Commons Platform release
 
-`dfo-infra` pins a DCP version (`1.1.x`) for the Terraform stack, and the image this repo builds has to match it. A website tag alone will not tell you which mixer that release runs. Google builds the release image from a website tag plus a mixer commit that runs ahead of what the tag pins. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` itself pins mixer `051d8ff`.
+`infra` pins a DCP version (`1.1.x`) for the Terraform stack, and the image this repo builds has to match it. A website tag alone will not tell you which mixer that release runs. Google builds the release image from a website tag plus a mixer commit that runs ahead of what the tag pins. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` itself pins mixer `051d8ff`.
 
 That mapping exists only inside the published image, as build args:
 
@@ -90,8 +89,8 @@ the PR into infra's `dev` branch that moves the `dfo-dev` image pin at
 `infra/dfo-dev/dcp/image.auto.tfvars`, and the PR merges itself once
 infra's required checks pass. Pushing to `main` runs `deploy-prod.yml`,
 which opens the PR into infra's `main` that moves
-`infra/dfo-prod/dcp/image.auto.tfvars`; a `release` team member approves
-and merges it. This repo proposes the pin. infra owns the Cloud Run
+`infra/dfo-prod/dcp/image.auto.tfvars`. A `release` team member approves
+and merges that PR. This repo proposes the pin. infra owns the Cloud Run
 service and applies it.
 
 ```sh
@@ -101,7 +100,7 @@ just DEPLOY_ENV=prod deploy    # prod image: dfo-prod-<sha>
 
 `deploy` is a break-glass path for when CI is down or you need to test an
 unmerged commit. It builds and pushes an immutable `dfo-<tier>-<sha>` image
-by hand. It does not touch `dfo-infra`'s pin, so landing the result as the
+by hand. It leaves infra's pin alone, so landing the result as the
 live image still means editing `infra/dfo-dev/dcp/image.auto.tfvars` and
 opening a PR yourself. A prod cut refuses a dirty tree, so the image is
 always reproducible from a committed sha.

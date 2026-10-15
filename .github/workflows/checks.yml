@@ -1,10 +1,10 @@
 name: DFO checks
 
 # ONE/DFO: the reusable body behind ci.yml and the deploy workflows' gate.
-# Checks the DFO-owned code paths only, not the upstream Data Commons test
-# suite; upstream code outside custom_dc/ is tested upstream. Two lanes:
-#   - custom_dc/dfo/prototypes: the Next.js frontend (TypeScript, vitest).
-#   - custom_dc/api_server: the Search API engine (ruff, ty, pytest).
+# Checks the DFO-owned frontend only, and upstream code outside custom_dc/ is
+# tested upstream. The single `prototypes` job covers custom_dc/dfo/prototypes,
+# the Next.js frontend (TypeScript, vitest). The `dev` ruleset requires it as
+# `checks / prototypes`.
 #
 # `on: workflow_call` rather than plain jobs in ci.yml so deploy-dev.yml and
 # deploy-prod.yml can `needs:` it directly, including on their

@@ -13,17 +13,17 @@ deploy through `terraform apply`. Both callers share
 `build-and-pin.yml`, which takes the infra base branch as its
 `infra-base` input.
 
-dfo-apis and dfo-ai instead deploy with a plain `gcloud run services
-update --image=...`, because dfo-infra's Terraform for those services
+apis and ai instead deploy with a plain `gcloud run services
+update --image=...`, because infra's Terraform for those services
 carries `lifecycle.ignore_changes` on the image. dcp's Cloud Run service
 is created inside a pinned upstream Terraform module (datacommons's own
-module, vendored into dfo-infra's `dcp` stack) that exposes no
+module, vendored into infra's `dcp` stack) that exposes no
 `ignore_changes` seam for the image, so a direct `gcloud run services
-update` would be reverted by dfo-infra's next `terraform apply`. This
-repo builds and pushes the image and proposes the pin. dfo-infra owns the
+update` would be reverted by infra's next `terraform apply`. This
+repo builds and pushes the image and proposes the pin. infra owns the
 service and performs the deploy.
 
-This file documents that workflow only. It's unrelated to the other
+This file documents that workflow only. It is unrelated to the other
 directories under `deploy/` (`git`, `helm_charts`, `nl`,
 `terraform-custom-datacommons`, `terraform-datacommons-website`), which
 are upstream Data Commons deploy assets this fork doesn't use.
@@ -39,18 +39,18 @@ ${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/dfo-services-image@sha256:<dig
 
 `<sha>` is the full 40-character git SHA of the commit that triggered the
 deploy; the tag is for humans browsing Artifact Registry. `<digest>` is
-what `deploy-dev.yml` actually pins in dfo-infra: Artifact Registry IAM
+what `deploy-dev.yml` pins in infra: Artifact Registry IAM
 has no granularity below the repository, and `dfo-ai-deployer` and
 `dfo-apis-deployer` both hold writer on this same `datacommons` repo, so
 either could overwrite a tag. A digest pin makes that a no-op, since the
-digest names the bytes directly. dfo-infra's validator rejects anything
-that isn't a digest pin in this exact shape.
+digest names the bytes directly. infra's validator accepts only a digest
+pin in this exact shape.
 
 This is the image the GitHub Actions workflow builds and pushes. `just
 deploy` is a separate break-glass path. It builds and pushes an
 immutable `dfo-<tier>-<sha>` tag by hand, resolves the digest Artifact
 Registry assigned it, and prints both, for when CI is down or you need
-to test an unmerged commit. It never touches dfo-infra's pin.
+to test an unmerged commit. It leaves infra's pin alone.
 
 ## GitHub vars and secrets
 
@@ -59,21 +59,21 @@ exists on this repo with a deployment branch policy restricted to `dev`.
 `deploy-prod.yml` reads the same names from the `production` Environment,
 with the App pair listed under "Production".
 
-| Name                      | Kind   | Example value                                                                               | Who provides it                                          |
-| ------------------------- | ------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `WIF_PROVIDER`            | secret | `projects/123456789/locations/global/workloadIdentityPools/github/providers/github-actions` | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `WIF_SA`                  | secret | `dfo-dcp-deployer@dev-fin-observatory.iam.gserviceaccount.com`                              | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `PIN_APP_CLIENT_ID`       | var    | `Iv23li...`                                                                                 | infra, via `just setup-github-apps`                      |
-| `PIN_APP_PRIVATE_KEY`     | secret | *(PEM private key)*                                                                         | infra, via `just setup-github-apps`                      |
-| `REGION`                  | var    | `northamerica-northeast1`                                                                   | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `PROJECT_ID`              | var    | `dev-fin-observatory`                                                                       | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `AR_REPO`                 | var    | `datacommons`                                                                               | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `AR_CACHE_REPO`           | var    | `dfo-dcp-build-cache`                                                                       | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `DFO_APIS_BASE_URL`       | var    | `https://dfo-dev-apis-zms5lj4zhq-nn.a.run.app`                                              | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
+| Name                  | Kind   | Example value                                                                               | Who provides it                           |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `WIF_PROVIDER`        | secret | `projects/123456789/locations/global/workloadIdentityPools/github/providers/github-actions` | infra, via `just ENV=dfo-dev handoff dcp` |
+| `WIF_SA`              | secret | `dfo-dcp-deployer@dev-fin-observatory.iam.gserviceaccount.com`                              | infra, via `just ENV=dfo-dev handoff dcp` |
+| `PIN_APP_CLIENT_ID`   | var    | `Iv23li...`                                                                                 | infra, via `just setup-github-apps`       |
+| `PIN_APP_PRIVATE_KEY` | secret | _(PEM private key)_                                                                         | infra, via `just setup-github-apps`       |
+| `REGION`              | var    | `northamerica-northeast1`                                                                   | infra, via `just ENV=dfo-dev handoff dcp` |
+| `PROJECT_ID`          | var    | `dev-fin-observatory`                                                                       | infra, via `just ENV=dfo-dev handoff dcp` |
+| `AR_REPO`             | var    | `datacommons`                                                                               | infra, via `just ENV=dfo-dev handoff dcp` |
+| `AR_CACHE_REPO`       | var    | `dfo-dcp-build-cache`                                                                       | infra, via `just ENV=dfo-dev handoff dcp` |
+| `DFO_APIS_BASE_URL`   | var    | `https://dfo-dev-apis-zms5lj4zhq-nn.a.run.app`                                              | infra, via `just ENV=dfo-dev handoff dcp` |
 
-dfo-infra sets every row except the App pair, along with the `dev`
+infra sets every row except the App pair, along with the `dev`
 Environment itself (branch policy, reviewers, wait timer). Run
-`just ENV=dfo-dev handoff dcp` from the dfo-infra repo. One script is the
+`just ENV=dfo-dev handoff dcp` from the infra repo. One script is the
 only writer of the environment's security-relevant settings.
 `build-and-pin.yml` stops at its first step and names every one of these
 that is unset. `DFO_APIS_BASE_URL` is the dfo-apis origin that
@@ -119,8 +119,7 @@ credentials.
 - `infra/dfo-dev/dcp/image.auto.tfvars`, containing only the
   `datacommons_services_image` assignment plus the header comment this
   workflow's `sed` step preserves. The validator on the dfo-infra side
-  accepts only a digest pin (`...dfo-services-image@sha256:<digest>`),
-  never a tag.
+  accepts only a digest pin (`...dfo-services-image@sha256:<digest>`).
 - `dfo-pin` (see above) installed on infra, and no ruleset on
   `deploy/dcp-dev` that blocks its force-moves.
 - `allow_auto_merge` enabled, and infra `dev`'s ruleset requiring checks
@@ -136,16 +135,14 @@ credentials.
 
 ## Branch protection on `dev`
 
-Both `checks.yml` jobs are required status checks on this repo's `dev`
-branch: PRs required, contexts `checks / prototypes` and
-`checks / api_server`, zero required approvals. Renaming a job in
-checks.yml changes its context string and silently stops it from
-reporting, which blocks every PR with no visible error -- update this
-list in the same PR as any job rename.
+The `dev` ruleset requires a pull request with zero approvals and the
+`checks / prototypes` status check. Renaming the job in checks.yml changes
+its context string and stops it reporting, which blocks every PR with no
+visible error. Update the ruleset in the same PR as any job rename.
 
 ## Repo-side prerequisites
 
 - The vars/secrets table above, populated on the `dev` Environment.
 - Production deploys run through `deploy-prod.yml`. `just
-  DEPLOY_ENV=prod deploy` is the break-glass path and needs
+DEPLOY_ENV=prod deploy` is the break-glass path and needs
   `DOCKER_REGISTRY` and `DFO_APIS_BASE_URL` set to prod's values.
