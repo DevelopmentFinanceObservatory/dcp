@@ -1,8 +1,8 @@
 name: Deploy dev
 
 # ONE/DFO: builds the dcp image into dev's Artifact Registry and opens the
-# image-pin PR on ONEcampaign/dfo-infra. build-and-pin.yml holds the steps,
-# shared with deploy-prod.yml.
+# image-pin PR into DevelopmentFinanceObservatory/infra's `dev` branch.
+# build-and-pin.yml holds the steps, shared with deploy-prod.yml.
 
 on:
   push:
@@ -24,12 +24,10 @@ jobs:
   # lands with red tests (workflow_dispatch, an admin override) can't still
   # deploy.
   checks:
-    if: github.repository_owner == 'ONEcampaign'
     uses: ./.github/workflows/checks.yml
 
   build-and-deploy:
     needs: checks
-    if: github.repository_owner == 'ONEcampaign'
     uses: ./.github/workflows/build-and-pin.yml
     # A called workflow sees no secrets, its environment's included, without this.
     secrets: inherit
@@ -37,9 +35,8 @@ jobs:
       environment: dev
       tier: dev
       deploy-branch: dev
-      infra-owner: ONEcampaign
-      infra-repo: dfo-infra
-      # dfo-infra's approve-image-pin.yml approves a pin PR once its checks
-      # pass, and the armed auto-merge then lands it.
+      infra-base: dev
+      # Infra `dev` needs no approval, so the armed auto-merge lands the pin
+      # once that branch's required checks pass.
       auto-merge: true
-      app: dfo-bot
+      app: dfo-pin

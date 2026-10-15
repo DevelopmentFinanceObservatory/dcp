@@ -1,10 +1,17 @@
 # Deploy (ONE/DFO)
 
 `deploy-dev.yml` builds and pushes the dcp image, then opens a pull
-request in `dfo-infra` that moves the `dev` image pin
-(`infra/dfo-dev/dcp/image.auto.tfvars`). It runs on every push to `dev`.
-Merging that PR triggers dfo-infra's own apply-on-merge workflow, which
-performs the actual deploy through `terraform apply`.
+request into the `dev` branch of
+[DevelopmentFinanceObservatory/infra](https://github.com/DevelopmentFinanceObservatory/infra)
+that moves the `dev` image pin (`infra/dfo-dev/dcp/image.auto.tfvars`). It
+runs on every push to `dev`, and the PR merges itself once infra `dev`'s
+required checks pass. `deploy-prod.yml` does the same on every push to
+`main`, into infra's `main` and `infra/dfo-prod/dcp/image.auto.tfvars`,
+and a `release` team member approves and merges that PR. Merging a pin PR
+triggers infra's own apply-on-merge workflow, which performs the actual
+deploy through `terraform apply`. Both callers share
+`build-and-pin.yml`, which takes the infra base branch as its
+`infra-base` input.
 
 dfo-apis and dfo-ai instead deploy with a plain `gcloud run services
 update --image=...`, because dfo-infra's Terraform for those services
@@ -56,8 +63,8 @@ with the App pair listed under "Production".
 | ------------------------- | ------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `WIF_PROVIDER`            | secret | `projects/123456789/locations/global/workloadIdentityPools/github/providers/github-actions` | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
 | `WIF_SA`                  | secret | `dfo-dcp-deployer@dev-fin-observatory.iam.gserviceaccount.com`                              | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
-| `DEPLOY_APP_ID`           | secret | `4423611`                                                                                   | this repo (see "dfo-bot GitHub App" below)               |
-| `DEPLOY_APP_PRIVATE_KEY`  | secret | *(PEM private key)*                                                                         | this repo (see "dfo-bot GitHub App" below)               |
+| `PIN_APP_CLIENT_ID`       | var    | `Iv23li...`                                                                                 | infra, via `just setup-github-apps`                      |
+| `PIN_APP_PRIVATE_KEY`     | secret | *(PEM private key)*                                                                         | infra, via `just setup-github-apps`                      |
 | `REGION`                  | var    | `northamerica-northeast1`                                                                   | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
 | `PROJECT_ID`              | var    | `dev-fin-observatory`                                                                       | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
 | `AR_REPO`                 | var    | `datacommons`                                                                               | dfo-infra, via `just ENV=dfo-dev handoff dcp`            |
@@ -73,50 +80,34 @@ that is unset. `DFO_APIS_BASE_URL` is the dfo-apis origin that
 `next.config.mjs` bakes into the `/api/search` and `/api/datasets`
 rewrites, so each environment names its own.
 
-### dfo-bot GitHub App
+### dfo-pin GitHub App
 
-`DEPLOY_APP_ID` and `DEPLOY_APP_PRIVATE_KEY` identify `dfo-bot`, a
-GitHub App this repo installed and owns (app id `4423611`, installed on
-`ONEcampaign/dfo-infra` and `ONEcampaign/dfo-dcp`, permissions
-`contents:write`, `pull_requests:write`, `metadata:read`). It mints the
-token `deploy-dev.yml` uses to push `deploy/dcp-dev` and open the pin PR
-in dfo-infra, since the pin PR must be authored by something other than
-`GITHUB_TOKEN` for dfo-infra's required checks to fire on it.
-
-Install the two secrets on the `dev` Environment:
-
-```
-gh secret set DEPLOY_APP_ID --env dev --repo ONEcampaign/dfo-dcp --body 4423611
-gh secret set DEPLOY_APP_PRIVATE_KEY --env dev --repo ONEcampaign/dfo-dcp < path/to/dfo-bot.private-key.pem
-```
-
-To rotate the private key: generate a new one from the App's settings
-page, run the `DEPLOY_APP_PRIVATE_KEY` command above with the new PEM,
-confirm the next deploy run mints a token successfully, then delete the
-old key from the App's settings.
+`PIN_APP_CLIENT_ID` and `PIN_APP_PRIVATE_KEY` identify `dfo-pin`, a
+GitHub App installed on `DevelopmentFinanceObservatory/infra` only, with
+`contents:write`, `pull_requests:write`, and `metadata:read`. Its key lives
+only in this repo's `dev` Environment. `deploy-dev.yml` mints a token from
+it, creates the pin commit through GitHub's REST git database API, moves
+`deploy/dcp-dev` to that commit, opens the pin PR into infra `dev`, and
+arms auto-merge. The PR must come from an App, since GitHub runs no
+workflows for a PR or merge made with `GITHUB_TOKEN`, so infra's required
+checks and apply-on-merge would never fire.
 
 ### Production
 
 `production` has the same names, with `just ENV=dfo-prod handoff dcp`
-setting the dfo-infra rows. It holds `RELEASE_APP_CLIENT_ID` (variable)
-and `RELEASE_APP_PRIVATE_KEY` (secret) in place of the `dfo-bot` pair.
-They identify `dfo-release`, the GitHub App installed on the
-DevelopmentFinanceObservatory repos, with `contents:write`,
-`pull_requests:write`, and `metadata:read` on `infra`. `deploy-prod.yml`
-mints a token from it, creates the pin commit through GitHub's REST git
-database API, moves `deploy/dcp-prod` to that commit, and opens the pin PR.
-GitHub signs a commit an App creates through the API, and infra's
-`sync-guard` admits only a signed pin commit by `dfo-release[bot]` whose
-one parent is `main`'s head. The reusable workflow's job declares the
-environment, so it reads the environment-level values itself, and each tier
-reads only its own App.
+setting the infra rows. It holds `RELEASE_APP_CLIENT_ID` (variable)
+and `RELEASE_APP_PRIVATE_KEY` (secret) in place of the `dfo-pin` pair.
+They identify `dfo-release`, with `contents:write`, `pull_requests:write`,
+and `metadata:read` on infra. `deploy-prod.yml` pins through the same
+steps into infra `main` and leaves auto-merge off. The reusable workflow's
+job declares the environment, so it reads the environment-level values
+itself, and each tier reads only its own App.
 
-Run `just ENV=dfo-prod setup-github-apps` from the dfo-infra repo to set
-the `dfo-release` pair on `production`. That script,
-`scripts/setup-github-apps.sh`, is the one writer of the reader and release
-App credentials. It leaves the `dfo-bot` pair above alone.
+Run `just setup-github-apps` from the infra repo to set either pair.
+That script, `scripts/setup-github-apps.sh`, is the one writer of the App
+credentials.
 
-## Prerequisites (dfo-infra)
+## Prerequisites (infra)
 
 - A Workload Identity Federation pool and provider trusting this repo's
   GitHub Actions OIDC issuer (no JSON service account keys).
@@ -130,10 +121,10 @@ App credentials. It leaves the `dfo-bot` pair above alone.
   workflow's `sed` step preserves. The validator on the dfo-infra side
   accepts only a digest pin (`...dfo-services-image@sha256:<digest>`),
   never a tag.
-- `dfo-bot` (see above) given write access to push branches and open
-  pull requests in dfo-infra, and branch protection on `deploy/dcp-dev`
-  (if any) that allows force-pushes from it.
-- `allow_auto_merge` enabled, so an approved pin PR merges on its own.
+- `dfo-pin` (see above) installed on infra, and no ruleset on
+  `deploy/dcp-dev` that blocks its force-moves.
+- `allow_auto_merge` enabled, and infra `dev`'s ruleset requiring checks
+  and no approval, so a dev pin PR merges on its own.
 - The `datacommons` Artifact Registry repo (already created in the dev
   project), for the image itself.
 - The `dfo-dcp-build-cache` Artifact Registry repo, for BuildKit's
@@ -155,9 +146,6 @@ list in the same PR as any job rename.
 ## Repo-side prerequisites
 
 - The vars/secrets table above, populated on the `dev` Environment.
-- A `staging` deploy path and GitHub Environment, once dfo-infra
-  provisions a staging project. CONTRIBUTING-DFO.md's branch model
-  already reserves `staging` between `dev` and `master`.
 - Production deploys run through `deploy-prod.yml`. `just
   DEPLOY_ENV=prod deploy` is the break-glass path and needs
   `DOCKER_REGISTRY` and `DFO_APIS_BASE_URL` set to prod's values.
