@@ -6,7 +6,7 @@ New here? Read [CONTRIBUTING-DFO.md](./CONTRIBUTING-DFO.md) before opening a bra
 
 ## Layout
 
-- **`custom_dc/`** is ONE Data's DFO code. `custom_dc/dfo/prototypes` is the frontend, and `custom_dc/api_server` holds a legacy copy of the Search API that stays until its removal PR lands. The Search API and Datasets API are built in [dfo-apis](https://github.com/ONEcampaign/dfo-apis). Upstream never touches these paths.
+- **`custom_dc/`** is ONE Data's DFO code. `custom_dc/dfo/prototypes` is the frontend, and `custom_dc/api_server` holds a legacy copy of the Search API that stays until its removal PR lands. The Search API and Datasets API are built in [apis](https://github.com/DevelopmentFinanceObservatory/apis). Upstream never touches these paths.
 - **Everything else** tracks upstream `datacommonsorg/website`, with the graph server (`mixer`) and ingestion (`import`) as submodules.
 
 ## Quickstart

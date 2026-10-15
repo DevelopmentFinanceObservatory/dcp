@@ -4,7 +4,7 @@ How development works in the DFO's fork of [datacommonsorg/website](https://gith
 
 ## What this repo is
 
-The DFO's Data Commons instance, meaning the mixer and the graph-serving layer under it. The Search API and Datasets API are built in [dfo-apis](https://github.com/ONEcampaign/dfo-apis) and read from the graph this repo serves.
+The DFO's Data Commons instance, meaning the mixer and the graph-serving layer under it. The Search API and Datasets API are built in [apis](https://github.com/DevelopmentFinanceObservatory/apis) and read from the graph this repo serves.
 
 Two kinds of code live here, and they behave differently.
 
@@ -15,15 +15,14 @@ The repo builds one container image. A sibling repo, `dfo-infra`, deploys it to 
 
 ## Branch model
 
-Three branches, each mapped to one environment. Work flows up, never down.
+Two branches, each mapped to one environment. Work flows up, never down.
 
 - **`dev`.** Active development, and the default branch. Feature branches merge here, and upstream syncs land here first. Deploys to `dfo-dev`.
-- **`master`.** Production. Protected, tagged, and only ever moved by promoting a validated `dev` commit. Every commit on `master` is deployable.
-- **`staging`.** Not built yet. It slots between `dev` and `master` once the staging environment exists in `dfo-infra`.
+- **`main`.** Production. Moved only by a reviewed PR from `dev`. Every commit on `main` is deployable.
 
 ```
-feat/*  ──►  dev  ──►  (staging)  ──►  master
-         dfo-dev                       dfo-prod
+feat/*  ──►  dev  ──►  main
+         dfo-dev     dfo-prod
 ```
 
 `customdc_stable` is not a tier. It mirrors upstream's stable release channel and serves as the reference point for `just sync`.
@@ -39,9 +38,10 @@ The loop is short.
    and `custom_dc/api_server`).
 
 3. On merge, `deploy-dev.yml` builds the image, pushes it to Artifact
-   Registry, and opens a PR in `dfo-infra` that moves the `dfo-dev` image
-   pin. Merging that PR triggers `dfo-infra`'s apply-on-merge, the actual
-   deploy. Validate against the live graph once it lands.
+   Registry, and opens a PR into infra's `dev` branch that moves the
+   `dfo-dev` image pin. The PR merges itself once infra's checks pass, and
+   infra's apply-on-merge does the deploy. Validate against the live graph
+   once it lands.
 
 ## Taking upstream changes
 
@@ -79,16 +79,20 @@ To move to a new DCP release, read `WEBSITE_HASH` and `MIXER_HASH` off that rele
 Production takes validated snapshots, not a channel. It is never exposed to a raw upstream bump.
 
 1. Confirm the `dev` commit you want is deployed and validated on `dfo-dev`.
-2. Fast-forward `master` to that commit. Because `dev` contains everything on `master`, this is always a clean fast-forward.
-3. Tag it `prod-YYYY-MM-DD`.
-4. Cut and deploy the image (below).
+2. Open a PR from `dev` into `main`. A `release` team member approves and merges it.
+3. Tag the merge commit `prod-YYYY-MM-DD`.
+4. `deploy-prod.yml` builds the image and opens the pin PR into infra's `main` (below).
 
 ## Building and deploying
 
 Pushing to `dev` builds and deploys automatically. `deploy-dev.yml` opens
-the PR in `dfo-infra` that moves the `dfo-dev` image pin at
-`infra/dfo-dev/dcp/image.auto.tfvars`. This repo proposes the pin.
-`dfo-infra` owns the Cloud Run service and applies it.
+the PR into infra's `dev` branch that moves the `dfo-dev` image pin at
+`infra/dfo-dev/dcp/image.auto.tfvars`, and the PR merges itself once
+infra's required checks pass. Pushing to `main` runs `deploy-prod.yml`,
+which opens the PR into infra's `main` that moves
+`infra/dfo-prod/dcp/image.auto.tfvars`; a `release` team member approves
+and merges it. This repo proposes the pin. infra owns the Cloud Run
+service and applies it.
 
 ```sh
 just deploy                    # dev image:  dfo-dev-<sha>
@@ -100,12 +104,11 @@ unmerged commit. It builds and pushes an immutable `dfo-<tier>-<sha>` image
 by hand. It does not touch `dfo-infra`'s pin, so landing the result as the
 live image still means editing `infra/dfo-dev/dcp/image.auto.tfvars` and
 opening a PR yourself. A prod cut refuses a dirty tree, so the image is
-always reproducible from a committed sha. Production has no automated
-deploy path, so `deploy` is the only way to cut a prod image.
+always reproducible from a committed sha.
 
 ## Conventions
 
 - **Commits** follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fix:`, `chore:`, and so on.
-- **PRs target `dev`.** Only the release step writes to `master`.
+- **PRs target `dev`.** Only the release step writes to `main`.
 - **Delete merged branches.** Feature branches are short-lived.
 - **Keep internal notes out of the repo.** Design docs, plans, and audits stay local. This guide and real reference docs are the exception.
