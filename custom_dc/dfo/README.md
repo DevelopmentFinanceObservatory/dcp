@@ -19,8 +19,8 @@ Cloud Run :8080
          ├── /core/api/     → mixer          :8081
          ├── /mcp           → MCP server     :8082
          ├── /prototype     → Next.js        :3000
-         ├── /api/search/   → Next.js        :3000 (proxies to dfo-apis)
-         └── /api/datasets  → Next.js        :3000 (proxies to dfo-apis)
+         ├── /api/search/   → Next.js        :3000 (rewritten to the website, which proxies to dfo-apis)
+         └── /api/datasets  → Next.js        :3000 (rewritten to the website, which proxies to dfo-apis)
 ```
 
 ### How the bake-in works
@@ -121,7 +121,7 @@ Runs the DC services container in the background (nginx on `:8080`, mixer on `:8
 > `next dev` runs on the host, so it needs `node_modules` present in `custom_dc/dfo/prototypes/`. `just dev` depends on `just typecheck`, which installs them on first run. If you start it another way, run `npm install` in `custom_dc/dfo/prototypes/` first — otherwise `next dev` can't find `next` and the DC site at `/` keeps working while `/prototype` does not.
 
 > [!NOTE]
-> `next.config.mjs` bakes the dfo-apis origin into the `/api/search` and `/api/datasets` rewrites and fails without `DFO_APIS_BASE_URL`. `just build` passes it as a Docker build argument and `just dev` sets it for `next dev`, and both default to dev's dfo-apis. A `DEPLOY_ENV=prod` build has no default and needs `DFO_APIS_BASE_URL`. Point them at a local engine with `DFO_APIS_BASE_URL=http://127.0.0.1:8083 just dev`. A bare `npm run dev` or `npm run build` needs the variable set in the shell.
+> `next.config.mjs` bakes the website origin into the `/api/search` and `/api/datasets` rewrites and fails without `DFO_SITE_ORIGIN`. The website proxies both paths to dfo-apis, so the prototype holds no apis credentials. `just build` passes the variable as a Docker build argument and `just dev` sets it for `next dev`, and both default to the dev website. A `DEPLOY_ENV=prod` build has no default and needs `DFO_SITE_ORIGIN`. Point them at a local dfo-apis engine, which serves the same two paths, with `DFO_SITE_ORIGIN=http://127.0.0.1:8083 just dev`. A bare `npm run dev` or `npm run build` needs the variable set in the shell.
 
 ### 4. Type-check before building
 
@@ -139,7 +139,7 @@ Installs `node_modules` on first run (via `npm ci --ignore-scripts`), then runs 
 The search prototype reads through a `SearchTransport` abstraction with two implementations:
 
 - **`FixtureTransport`** (default) — replays canned fixture data. No network calls needed.
-- **`HttpTransport`** — calls the live Search API at `/api/search/*` (same-origin; proxied to `dfo-apis`).
+- **`HttpTransport`** — calls the live Search API at `/api/search/*` (same-origin; rewritten to the website, which proxies to `dfo-apis`).
 
 Set in `env.list` / the environment:
 

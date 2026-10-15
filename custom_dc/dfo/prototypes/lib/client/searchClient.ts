@@ -5,9 +5,10 @@
  * (EventSource can't POST). Buffered: the same POST minus the Accept header.
  *
  * Base URL: same-origin '/api/search/*' everywhere — nginx routes it to Next.js
- * (:3000) which rewrites/proxies it to dfo-apis (the DFO_APIS_BASE_URL origin
- * baked in at build time), so no CORS setup is needed. Override NEXT_PUBLIC_SEARCH_API_BASE only to hit a
- * remote engine origin directly.
+ * (:3000) which rewrites it to the website (the DFO_SITE_ORIGIN origin baked
+ * in at build time), and the website proxies to dfo-apis, so no CORS setup is
+ * needed. Override NEXT_PUBLIC_SEARCH_API_BASE only to hit a remote engine
+ * origin directly.
  *
  * MIRROR: A deliberately-shallow type layer of the engine contract. See the
  * fuller types in `lib/contract/types.ts` (source of truth: `custom_dc/api_server/

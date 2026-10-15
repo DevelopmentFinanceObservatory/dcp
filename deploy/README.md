@@ -69,16 +69,24 @@ with the App pair listed under "Production".
 | `PROJECT_ID`          | var    | `dev-fin-observatory`                                                                       | infra, via `just ENV=dfo-dev handoff dcp` |
 | `AR_REPO`             | var    | `datacommons`                                                                               | infra, via `just ENV=dfo-dev handoff dcp` |
 | `AR_CACHE_REPO`       | var    | `dfo-dcp-build-cache`                                                                       | infra, via `just ENV=dfo-dev handoff dcp` |
-| `DFO_APIS_BASE_URL`   | var    | `https://dfo-dev-apis-zms5lj4zhq-nn.a.run.app`                                              | infra, via `just ENV=dfo-dev handoff dcp` |
+| `DFO_SITE_ORIGIN`     | var    | `https://dfo-dev-website-staging-zms5lj4zhq-nn.a.run.app`                                   | infra, via `just ENV=dfo-dev handoff dcp` |
 
 infra sets every row except the App pair, along with the `dev`
 Environment itself (branch policy, reviewers, wait timer). Run
 `just ENV=dfo-dev handoff dcp` from the infra repo. One script is the
 only writer of the environment's security-relevant settings.
 `build-and-pin.yml` stops at its first step and names every one of these
-that is unset. `DFO_APIS_BASE_URL` is the dfo-apis origin that
+that is unset. `DFO_SITE_ORIGIN` is the website origin that
 `next.config.mjs` bakes into the `/api/search` and `/api/datasets`
-rewrites, so each environment names its own.
+rewrites, so each environment names its own. That is the dev website's
+staging service URL on `dev` and `https://developmentfinance.org` on prod.
+The website proxies both paths to dfo-apis.
+
+In prod, the prototype's search and dataset calls reach
+developmentfinance.org from the dcp server, not from each user's browser.
+All prototype users therefore share that server's address under the site's
+per-address rate limit of 600 data-API requests a minute, with a 10-minute
+block when exceeded.
 
 ### dfo-pin GitHub App
 
@@ -145,4 +153,4 @@ visible error. Update the ruleset in the same PR as any job rename.
 - The vars/secrets table above, populated on the `dev` Environment.
 - Production deploys run through `deploy-prod.yml`. `just
 DEPLOY_ENV=prod deploy` is the break-glass path and needs
-  `DOCKER_REGISTRY` and `DFO_APIS_BASE_URL` set to prod's values.
+  `DOCKER_REGISTRY` and `DFO_SITE_ORIGIN` set to prod's values.

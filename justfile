@@ -23,11 +23,12 @@ DEPLOY_ENV := "dev"
 # Load registry config from env file if it exists
 DOCKER_REGISTRY := env_var_or_default("DOCKER_REGISTRY", "northamerica-northeast1-docker.pkg.dev/dev-fin-observatory/datacommons/dfo-services-image")
 GOOGLE_CLOUD_REGION := env_var_or_default("GOOGLE_CLOUD_REGION", "northamerica-northeast1")
-# dfo-apis origin baked into the Next.js rewrites by `build` and read by `dev`.
-# The dev tier falls back to dev's dfo-apis. A prod build must name its own origin
-# (DFO_APIS_BASE_URL=<origin> just DEPLOY_ENV=prod deploy); without it just stops with
-# "environment variable `DFO_APIS_BASE_URL` not present".
-DFO_APIS_BASE_URL := if DEPLOY_ENV == "prod" { env_var("DFO_APIS_BASE_URL") } else { env_var_or_default("DFO_APIS_BASE_URL", "https://dfo-dev-apis-zms5lj4zhq-nn.a.run.app") }
+# Website origin baked into the Next.js rewrites by `build` and read by `dev`. The
+# prototype reaches dfo-apis through the website's /api/search and /api/datasets
+# proxy. The dev tier falls back to the dev website. A prod build must name its own origin
+# (DFO_SITE_ORIGIN=<origin> just DEPLOY_ENV=prod deploy); without it just stops with
+# "environment variable `DFO_SITE_ORIGIN` not present".
+DFO_SITE_ORIGIN := if DEPLOY_ENV == "prod" { env_var("DFO_SITE_ORIGIN") } else { env_var_or_default("DFO_SITE_ORIGIN", "https://dfo-dev-website-staging-zms5lj4zhq-nn.a.run.app") }
 
 # GCP Application Default Credentials path (for mounting into Docker)
 GCP_ADC := env_var("HOME") / ".config/gcloud/application_default_credentials.json"
@@ -184,7 +185,7 @@ typecheck:
 build: typecheck
     @echo "Building {{IMAGE}} from {{DOCKERFILE}} for linux/amd64..."
     docker buildx build --platform linux/amd64 --provenance=false --load \
-        --build-arg DFO_APIS_BASE_URL={{DFO_APIS_BASE_URL}} \
+        --build-arg DFO_SITE_ORIGIN={{DFO_SITE_ORIGIN}} \
         --tag {{IMAGE}} -f {{DOCKERFILE}} .
 
 # Build and run in one step
@@ -239,7 +240,7 @@ dev: typecheck _check-env _check-gcloud
 
     echo "Starting Next dev → http://localhost:3000/prototype  (Ctrl-C stops all)"
     cd custom_dc/dfo/prototypes
-    DC_API_BASE_URL=http://127.0.0.1:8081/v2 DFO_APIS_BASE_URL={{DFO_APIS_BASE_URL}} npm run dev
+    DC_API_BASE_URL=http://127.0.0.1:8081/v2 DFO_SITE_ORIGIN={{DFO_SITE_ORIGIN}} npm run dev
 
 # Stop all running dfo-services containers
 stop:
@@ -300,9 +301,9 @@ push: _check-env
 # result live still means hand-editing the infra repo's
 # infra/dfo-<tier>/dcp/image.auto.tfvars and opening a PR yourself. Reach for
 # it only when CI is down or to test an unmerged commit.
-# Defaults to the dev tier. For a prod cut, set the registry and the dfo-apis
+# Defaults to the dev tier. For a prod cut, set the registry and the website
 # origin explicitly:
-#   DOCKER_REGISTRY=<prod registry path> DFO_APIS_BASE_URL=<origin> just DEPLOY_ENV=prod deploy
+#   DOCKER_REGISTRY=<prod registry path> DFO_SITE_ORIGIN=<origin> just DEPLOY_ENV=prod deploy
 deploy: build
     #!/usr/bin/env bash
     set -euo pipefail
