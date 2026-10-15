@@ -148,9 +148,9 @@ COPY custom_dc/dfo/prototypes/ ./
 # fixtures-only image. The engine still needs GEMINI_API_KEY set at runtime.
 ARG NEXT_PUBLIC_USE_SEARCH_API=1
 ENV NEXT_PUBLIC_USE_SEARCH_API=${NEXT_PUBLIC_USE_SEARCH_API}
-# The dfo-apis origin that next.config.mjs bakes into the /api/search and
+# The website origin that next.config.mjs bakes into the /api/search and
 # /api/datasets rewrites. Required: next.config.mjs throws when it is empty.
-ARG DFO_APIS_BASE_URL
+ARG DFO_SITE_ORIGIN
 RUN npm run build
 # <<< DFO bake-in <<<
 

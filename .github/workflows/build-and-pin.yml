@@ -14,7 +14,7 @@ name: Build and pin
 #
 # The job declares the caller's environment, which supplies every GCP name
 # (vars.REGION, vars.PROJECT_ID, vars.AR_REPO, vars.AR_CACHE_REPO,
-# vars.DFO_APIS_BASE_URL), the WIF_PROVIDER/WIF_SA secrets, and the pair for the
+# vars.DFO_SITE_ORIGIN), the WIF_PROVIDER/WIF_SA secrets, and the pair for the
 # GitHub App that opens the pin PR. A caller job that uses a reusable workflow
 # cannot declare an environment, so it cannot hand environment-level values
 # down. The caller names its App in the `app` input and the job reads only that
@@ -86,7 +86,7 @@ jobs:
           PROJECT_ID: ${{ vars.PROJECT_ID }}
           AR_REPO: ${{ vars.AR_REPO }}
           AR_CACHE_REPO: ${{ vars.AR_CACHE_REPO }}
-          DFO_APIS_BASE_URL: ${{ vars.DFO_APIS_BASE_URL }}
+          DFO_SITE_ORIGIN: ${{ vars.DFO_SITE_ORIGIN }}
           WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
           WIF_SA: ${{ secrets.WIF_SA }}
           PIN_APP_CLIENT_ID: ${{ vars.PIN_APP_CLIENT_ID }}
@@ -94,7 +94,7 @@ jobs:
           RELEASE_APP_CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
           RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
         run: |
-          required="REGION PROJECT_ID AR_REPO AR_CACHE_REPO DFO_APIS_BASE_URL WIF_PROVIDER WIF_SA"
+          required="REGION PROJECT_ID AR_REPO AR_CACHE_REPO DFO_SITE_ORIGIN WIF_PROVIDER WIF_SA"
           case "$APP" in
             dfo-pin) required="$required PIN_APP_CLIENT_ID PIN_APP_PRIVATE_KEY" ;;
             dfo-release) required="$required RELEASE_APP_CLIENT_ID RELEASE_APP_PRIVATE_KEY" ;;
@@ -183,12 +183,12 @@ jobs:
           # on the rare commits that move the submodule, and the website SHA is
           # already recoverable from the image tag.
           #
-          # DFO_APIS_BASE_URL is the apis origin next.config.mjs bakes into
+          # DFO_SITE_ORIGIN is the website origin next.config.mjs bakes into
           # the /api/search and /api/datasets rewrites. The Next build stage
           # fails when it is empty.
           build-args: |
             MIXER_HASH=${{ steps.target.outputs.mixer_hash }}
-            DFO_APIS_BASE_URL=${{ vars.DFO_APIS_BASE_URL }}
+            DFO_SITE_ORIGIN=${{ vars.DFO_SITE_ORIGIN }}
           # Registry-backed cache, not GHA's own cache backend, which is
           # capped and evicted too aggressively for this build. mode=max
           # caches every intermediate layer, so the mixer and Next.js build
