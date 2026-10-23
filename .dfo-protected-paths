@@ -17,6 +17,12 @@ justfile
 .dfo-protected-paths
 .dfo-overridden-files
 
+# Public-facing docs: DFO's own README, contributor guide and maintainer notes.
+# Upstream's root CONTRIBUTING.md stays upstream's; GitHub shows .github/CONTRIBUTING.md first.
+README.md
+.github/CONTRIBUTING.md
+docs/development.md
+
 # CI/deploy workflows and deploy docs are DFO-owned even though they live
 # under upstream-owned directories (.github/, deploy/); an upstream file
 # colliding on a name we use here must not auto-resolve to upstream's version.
