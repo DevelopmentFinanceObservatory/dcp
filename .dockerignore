@@ -16,6 +16,7 @@ import/simple/sample/
 **/.data
 **/testdata
 **/test_data
+import/simple/tests/
 
 # ONE/DFO: exclude build artifacts from the Docker build context; keep source.
 **/.next
