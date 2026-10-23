@@ -25,8 +25,6 @@ feat/*  ──►  dev  ──►  main
          dfo-dev     dfo-prod
 ```
 
-`customdc_stable` is not a tier. It mirrors upstream's stable release channel and serves as the reference point for `just sync`.
-
 ## Where your work goes
 
 The loop is short.
@@ -44,32 +42,37 @@ The loop is short.
 
 ## Taking upstream changes
 
-Upstream sync is a step on `dev`, not a separate long-lived branch.
+`dev` tracks Data Commons Platform (DCP) releases. `infra` pins a DCP version as `dcp_version` in `infra/stacks/dcp/variables.tf`, and `dev` carries the website and mixer that release was built from. A sync is a merge of that website commit into `dev`, so `dev` shares history with datacommonsorg/website.
 
 ```sh
 git checkout dev
-git fetch upstream
-just sync                 # shows what changed since the last sync
-git merge upstream/master
-git submodule update --init --recursive
+just sync 1.1.6           # merge the website commit DCP 1.1.6 was built from
 ```
 
-Merging upstream's website also moves the `mixer` and `import` submodule pointers, because upstream pins them. **Website and submodules must move together.**
+`just sync` stops on conflicts. `just sync-resolve` takes upstream's side for every path outside `.dfo-protected-paths` and leaves the protected ones for you; after resolving those, `git add` them and run `just sync-finish`. `just sync-abort` drops the merge. Once committed, the recipe checks out the submodules and runs `just check-overrides`, which lists the seam files in `.dfo-overridden-files` that upstream changed across the sync.
 
 ### Matching a Data Commons Platform release
 
-`infra` pins a DCP version (`1.1.x`) for the Terraform stack, and the image this repo builds has to match it. A website tag alone will not tell you which mixer that release runs. Google builds the release image from a website tag plus a mixer commit that runs ahead of what the tag pins. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` itself pins mixer `051d8ff`.
+The website and mixer move as a pair, and the pairing comes from the release image. Each image `gcr.io/datcom-ci/datacommons-services:<version>` records its source commits as the `WEBSITE_HASH` and `MIXER_HASH` build args. A website tag does not settle the mixer: Google can build a release with a mixer newer than the one the tag pins. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` pins mixer `051d8ff`.
 
-That mapping exists only inside the published image, as build args:
+`just dcp-pair <version>` prints the pairing:
+
+```sh
+$ just dcp-pair 1.1.6
+website=9852134
+mixer=8118587
+```
+
+It reads the image config from the registry, the same as:
 
 ```sh
 CFG=$(curl -s -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-  https://gcr.io/v2/datcom-ci/datacommons-services/manifests/1.1.2 | jq -r .config.digest)
+  https://gcr.io/v2/datcom-ci/datacommons-services/manifests/1.1.6 | jq -r .config.digest)
 curl -sL https://gcr.io/v2/datcom-ci/datacommons-services/blobs/$CFG \
   | jq '.config.Env[] | select(contains("HASH"))'
 ```
 
-To move to a new DCP release, read `WEBSITE_HASH` and `MIXER_HASH` off that release's image, merge the website commit, then set the `mixer` pointer to `MIXER_HASH`. Taking the mixer the website tag carries instead builds a pairing Google never tested against that release's Terraform stack.
+`just sync` merges `WEBSITE_HASH`, sets the `mixer` pointer to `MIXER_HASH`, and sets the `import` pointer to the one the website commit pins. It fails if the image or either build arg is missing. Taking the mixer the website tag carries builds a pairing Google never tested against that release's Terraform stack.
 
 `.github/workflows/codeql-analysis.yml`, `dependabot-approval.yml`, and `submodule-update.yml` are deleted in this fork. All three guard their jobs on `github.repository == 'datacommonsorg/website'`, so they never run here. Upstream re-adds them on every sync that touches them. Keep them deleted rather than resolving the conflict toward upstream's version.
 

@@ -209,40 +209,25 @@ The only files that can conflict on upstream sync are the three seam files (`bui
 
 ### Workflow
 
-1. **Check what changed:**
+`dev` tracks Data Commons Platform releases. Each release image records the website and mixer commits it was built from, and `just sync` reads them from there.
+
+1. **Merge the release's website commit:**
 
    ```
-   $ just sync
-   Commits behind upstream/customdc_stable: 12
+   $ just sync 1.1.6
+   DCP 1.1.6: website 9852134, mixer 8118587
+   Merging website v3.5.13 into dev...
    ```
 
-2. **Merge:**
+   The recipe pins `mixer` to the release's mixer and `import` to the website's pin. On a clean merge it commits, updates submodules, and runs `check-overrides`. On conflicts it lists them and stops.
 
-   ```
-   $ just sync-auto
-   ```
+2. **Resolve conflicts:**
 
-   On a clean merge, this updates submodules and runs `check-overrides`. On conflicts, it lists them and offers options.
+   - `just sync-resolve` accepts upstream for everything except paths in `.dfo-protected-paths`, lists the protected files for manual resolution, and finishes the merge when none remain.
+   - After resolving by hand, `git add` the files and run `just sync-finish`. It refuses while conflict markers remain, then commits, updates submodules, and runs `check-overrides`.
+   - `just sync-abort` aborts and returns to the pre-merge state.
 
-3. **Resolve conflicts:**
-
-   - `just sync-resolve` — accepts upstream for everything except paths in `.dfo-protected-paths`; lists the protected files for manual resolution.
-   - `just sync-theirs` — accepts upstream for all conflicts. Use when none of the conflicting files are DFO-owned.
-   - `just sync-abort` — abort and return to the pre-merge state.
-
-4. **Check for stray conflict markers:**
-
-   ```
-   $ just check-markers
-   ```
-
-5. **Check seam file changes:**
-
-   ```
-   $ just check-overrides
-   ```
-
-   This compares each upstream seam file against its last merge base. If an upstream commit touched `Dockerfile`, `run.sh`, or `nginx.conf`, it prints a warning:
+3. **Check seam file changes.** `check-overrides` compares each upstream seam file across the sync, from the previous merge base to the new website commit. If upstream touched `Dockerfile`, `run.sh`, or `nginx.conf`, it prints a warning:
 
    ```
    WARNING  build/cdc_services/run.sh
@@ -250,7 +235,7 @@ The only files that can conflict on upstream sync are the three seam files (`bui
       Changes: 1 file changed, 3 insertions(+)
    ```
 
-   When this fires, read the upstream diff (`git diff <merge-base>..upstream/customdc_stable -- build/cdc_services/run.sh`), confirm the DFO hooks are still in place and still correct, then rebuild and run the e2e check.
+   When this fires, read the upstream diff it prints (`git diff <base>..<website> -- build/cdc_services/run.sh`), confirm the DFO hooks are still in place and still correct, then rebuild and run the e2e check. To preview a sync, run `just check-overrides <website-commit>`.
 
 `.dfo-protected-paths` lists the paths `sync-resolve` protects from auto-resolution. `.dfo-overridden-files` maps each seam file to its DFO delegate(s), which is what `check-overrides` reads.
 
@@ -282,7 +267,7 @@ the same supervisor.
 
 The subshell loops forever and never exits on its own, so `run.sh`'s `wait -n` never sees it die. A Next.js crash restarts Next in ~2 seconds without affecting the mixer, website, or MCP process. The DC site stays up.
 
-A crash in a DC service (mixer, website, NL, or MCP) still hits `wait -n` and exits the container, triggering a Cloud Run restart. That is upstream's intended behaviour and is unchanged.
+A crash in a DC service (mixer, Envoy, website, or MCP) still hits `wait -n` and exits the container, triggering a Cloud Run restart. That is upstream's intended behaviour and is unchanged.
 
 ---
 
