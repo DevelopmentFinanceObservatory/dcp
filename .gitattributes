@@ -1,5 +1,5 @@
 # Keep DFO-owned copies of upstream-tracked files across `git merge upstream/master`.
 # `merge=ours` makes git keep our version and discard upstream's changes to these paths.
-# The driver is registered per-clone by `just setup` (git config merge.ours.driver true);
+# `just sync` and `just setup` register the driver per clone (git config merge.ours.driver true);
 # without it git falls back to a normal 3-way merge.
 README.md merge=ours

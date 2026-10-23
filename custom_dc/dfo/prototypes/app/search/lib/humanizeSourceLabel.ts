@@ -1,7 +1,7 @@
 /**
  * humanizeSourceLabel — normalize a raw provenance/import identifier for
  * source-axis display text. Ports the engine's own rule
- * (custom_dc/api_server/src/search/render.py's `_humanize_source_label` /
+ * (the apis repo's src/search/render/labels.py `_humanize_source_label` /
  * `_camel_to_words`) verbatim so a bound source chip (rendered by the engine)
  * and this frontend's source popover options (built from the same raw labels
  * via `optionsFromSpec`'s resolved_sources fallback) never disagree on

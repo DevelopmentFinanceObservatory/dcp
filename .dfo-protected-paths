@@ -10,12 +10,21 @@ build/cdc_services/Dockerfile
 build/cdc_services/run.sh
 build/cdc_services/nginx.conf
 
-# Repo-level DFO files
+# Repo-level DFO files. Every upstream-tracked file DFO modifies, adds, or
+# deletes belongs here, or a conflict on it silently takes upstream's side.
 justfile
 .dockerignore
 .gcloudignore
 .dfo-protected-paths
 .dfo-overridden-files
+.gitattributes
+.gitignore
+README.md
+package-lock.json
+pyproject.toml
+CONTRIBUTING-DFO.md
+# Deleted in this fork; a conflict here means upstream changed it.
+.github/CODEOWNERS
 
 # CI/deploy workflows and deploy docs are DFO-owned even though they live
 # under upstream-owned directories (.github/, deploy/); an upstream file
