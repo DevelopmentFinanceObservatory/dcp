@@ -9,7 +9,7 @@ The DFO's Data Commons instance, meaning the mixer and the graph-serving layer u
 Two kinds of code live here, and they behave differently.
 
 - **Upstream code.** Everything outside `custom_dc/` tracks datacommonsorg/website and the `mixer` and `import` submodules. We take changes from upstream; we do not write them here.
-- **ONE Data code.** Everything under `custom_dc/` is ours (for the DFO). `custom_dc/dfo/prototypes` is the frontend, and `custom_dc/api_server` holds a legacy copy of the Search API that stays until its removal PR lands. Upstream never touches these paths, so an upstream sync cannot conflict with work there.
+- **ONE Data code.** Everything under `custom_dc/` is ours (for the DFO). `custom_dc/dfo/prototypes` is the frontend. Upstream never touches these paths, so an upstream sync cannot conflict with work there.
 
 The repo builds one container image. A sibling repo, `infra`, deploys it to Cloud Run. This repo builds and pushes an image, and `infra` runs it.
 
@@ -74,7 +74,7 @@ curl -sL https://gcr.io/v2/datcom-ci/datacommons-services/blobs/$CFG \
 
 `just sync` merges `WEBSITE_HASH`, sets the `mixer` pointer to `MIXER_HASH`, and sets the `import` pointer to the one the website commit pins. It fails if the image or either build arg is missing. Taking the mixer the website tag carries builds a pairing Google never tested against that release's Terraform stack.
 
-`.github/workflows/codeql-analysis.yml`, `dependabot-approval.yml`, and `submodule-update.yml` are deleted in this fork. All three guard their jobs on `github.repository == 'datacommonsorg/website'`, so they never run here. Upstream re-adds them on every sync that touches them. Keep them deleted rather than resolving the conflict toward upstream's version.
+`.github/workflows/` is DFO-owned. A workflow file upstream adds there would run on the fork, so a sync takes nothing from upstream under that directory. `just sync` and `just sync-finish` reset it to the pre-merge version and list every file upstream added, changed, or deleted there. Port one by hand in its own PR if the fork needs it. Upstream's `codeql-analysis.yml`, `dependabot-approval.yml`, and `submodule-update.yml` stay deleted this way.
 
 ## Releasing to production
 
@@ -112,5 +112,6 @@ always reproducible from a committed sha.
 
 - **Commits** follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`, `fix:`, `chore:`, and so on.
 - **PRs target `dev`.** Only the release step writes to `main`.
+- **PRs into `dev` land as merge commits.** The `dev` ruleset allows only merges. A sync commit's second parent is the upstream website commit, and that parent is what keeps the fork's history shared with datacommonsorg/website. A squash or rebase drops it, and the next sync merges from an older base and replays upstream changes the fork already has as conflicts.
 - **Delete merged branches.** Feature branches are short-lived.
 - **Keep internal notes out of the repo.** Design docs, plans, and audits stay local. This guide and real reference docs are the exception.

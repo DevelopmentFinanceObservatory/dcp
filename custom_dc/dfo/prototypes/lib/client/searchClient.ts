@@ -11,8 +11,8 @@
  * origin directly.
  *
  * MIRROR: A deliberately-shallow type layer of the engine contract. See the
- * fuller types in `lib/contract/types.ts` (source of truth: `custom_dc/api_server/
- * src/search/models.py`). Keep this layer in sync as the contract evolves.
+ * fuller types in `lib/contract/types.ts` (source of truth: the apis repo's
+ * `src/search/models/`). Keep this layer in sync as the contract evolves.
  */
 
 import {

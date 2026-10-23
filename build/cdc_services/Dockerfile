@@ -120,7 +120,10 @@ COPY custom_dc/dfo/prototypes/ ./
 # Wire /prototype/search to the live Search API. This is a NEXT_PUBLIC_* var, so
 # it is inlined into the browser bundle at build time — a runtime env on Cloud Run
 # cannot flip it. Set to 0 (--build-arg NEXT_PUBLIC_USE_SEARCH_API=0) to bake a
-# fixtures-only image. The engine still needs GEMINI_API_KEY set at runtime.
+# fixtures-only image. /api/search is rewritten to dfo-apis and needs no key here.
+# GEMINI_API_KEY (or GOOGLE_API_KEY) is read at runtime by /api/similarity, which
+# falls back to pseudo-embeddings without it, and by /api/skill-compare
+# (lib/skillAgent.ts), which returns an error without it.
 ARG NEXT_PUBLIC_USE_SEARCH_API=1
 ENV NEXT_PUBLIC_USE_SEARCH_API=${NEXT_PUBLIC_USE_SEARCH_API}
 # The website origin that next.config.mjs bakes into the /api/search and

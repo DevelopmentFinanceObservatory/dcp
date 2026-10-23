@@ -8,10 +8,11 @@ name: CI
 # tree before it builds.
 #
 # Does not build the Docker image. build/cdc_services/Dockerfile compiles
-# the Go mixer, builds two Python venvs, and runs a Next.js production
-# build across four stages -- several minutes even with cache, so it only
-# runs on push to a deploy branch, in deploy-dev.yml and deploy-prod.yml,
-# with a registry-backed cache to keep that path fast.
+# the Go mixer, installs the website's Python venv, builds the website's
+# static assets, and runs a Next.js production build, in four build stages
+# -- several minutes even with cache, so it only runs on push to a deploy
+# branch, in deploy-dev.yml and deploy-prod.yml, with a registry-backed
+# cache to keep that path fast.
 
 on:
   pull_request:

@@ -77,8 +77,8 @@ Manager **Secret Accessor** role on those secrets — if a key can't be fetched,
 the recipe prompts for it instead. The resulting `env.list` is gitignored; never
 commit it.
 
-Any value can be supplied as an environment variable to skip its prompt (and, for
-the keys, to override Secret Manager) — so `just env` runs fully non-interactively
+Any prompted value can be supplied as an environment variable to skip its prompt
+(and, for the keys, to override Secret Manager) — so `just env` runs fully non-interactively
 in CI:
 
 ```
@@ -88,15 +88,21 @@ $ OUTPUT_DIR=/data DC_API_KEY=… MAPS_API_KEY=… just env
 `OUTPUT_DIR` is the only value with no Secret Manager fallback, so set it this way
 (or accept the prompt) when running headless.
 
-`env.list.sample` sets `GCP_PROJECT_ID`, `GCP_SPANNER_INSTANCE_ID`, and
-`GCP_SPANNER_DATABASE_NAME` to the dfo-dev values (`dev-fin-observatory`,
-`dfo-dev-dc-instance`, `dfo-dev-dc-db`), and `just env` fills them in when they
-are empty or missing. The container's
+`env.list.sample` sets `GCP_PROJECT_ID`, `GCP_SPANNER_INSTANCE_ID`,
+`GCP_SPANNER_DATABASE_NAME`, and `REGION` to the dfo-dev values
+(`dev-fin-observatory`, `dfo-dev-dc-instance`, `dfo-dev-dc-db`,
+`northamerica-northeast1`), and `just env` fills them in when they are empty or
+missing. It takes these four from fixed values and ignores the shell environment,
+so the project, instance, and database always name the same graph. The container's
 `run.sh` starts mixer against that Spanner graph on every boot and exits without a
-project, so a local container reads dfo-dev data through your mounted ADC. Your
-account needs Spanner read access (`roles/spanner.databaseReader`) on that
-database. `just run-local`, `just dev`, and `just shell` stop with an error if
-`env.list` lacks any of the three; run `just env` to add them to an older file.
+project, so a local container reads dfo-dev data through your mounted ADC. It also
+passes the project to mixer as `--host_project`, and mixer then embeds query terms
+through Vertex AI in `REGION` (us-central1 when `REGION` is empty). The account
+behind your ADC needs two roles on `dev-fin-observatory`:
+`roles/spanner.databaseReader` to read the graph and `roles/aiplatform.user` to
+call the embedding model. `just run-local`, `just dev`, and `just shell` stop with
+an error if `env.list` lacks the Spanner settings; run `just env` to add them to
+an older file.
 
 ### 2. Build and run the baked image
 
@@ -215,7 +221,7 @@ $ cd ../dfo-infra && just deploy <printed-ref>
 
 ## Keeping in sync with upstream
 
-An upstream sync can conflict only on upstream-tracked files DFO modifies, adds, or deletes: the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`) and the repo-level files listed in `.dfo-protected-paths`, such as `README.md`, `.gitignore`, `package-lock.json`, and the CI workflows. Everything under `custom_dc/dfo/` and `custom_dc/api_server/` is untouched by upstream.
+An upstream sync can conflict only on upstream-tracked files DFO modifies, adds, or deletes: the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`) and the repo-level files listed in `.dfo-protected-paths`, such as `README.md`, `.gitignore`, `package-lock.json`, and the CI workflows. Everything under `custom_dc/dfo/` is untouched by upstream. `.github/workflows/` is DFO-owned too, and a sync keeps it as it was: `just sync` and `just sync-finish` leave every workflow upstream adds, changes, or deletes out of the merge and list it.
 
 ### Workflow
 

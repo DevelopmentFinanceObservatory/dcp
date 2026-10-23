@@ -155,11 +155,12 @@ env:
         if [ -n "$value" ]; then echo "  Set $key."; else echo "  $key left blank (Search API disabled until set)."; fi
     }
     set_default() {
-        # Fill an empty or missing key from the env-var override or the dfo-dev default.
-        local key="$1" default="$2" current value
+        # Fill an empty or missing key with the fixed dfo-dev value. The shell
+        # environment is ignored, so a stray export cannot pair one project's
+        # id with another's instance.
+        local key="$1" value="$2" current
         current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -n "$current" ]; then echo "  $key already set."; return; fi
-        value="${!key:-$default}"
         if grep -q "^${key}=$" "$TARGET" 2>/dev/null; then
             sed -i.bak "s|^${key}=$|${key}=${value}|" "$TARGET" && rm -f "${TARGET}.bak"
         else
@@ -171,10 +172,13 @@ env:
     set_from_secret_or_prompt "MAPS_API_KEY" "Maps API key" "dfo-dev-dc-google-maps-api-key"
     set_from_secret_optional "GEMINI_API_KEY" "dfo-dev-gemini-api-key"
     set_or_prompt "OUTPUT_DIR" "Output directory (absolute path)"
-    # run.sh points mixer at the Spanner graph on every boot and exits without a project.
+    # run.sh points mixer at the Spanner graph on every boot and exits without a
+    # project. It passes --host_project, so mixer also embeds query terms through
+    # Vertex AI in REGION, and calls us-central1 when REGION is empty.
     set_default "GCP_PROJECT_ID" "$PROJECT"
     set_default "GCP_SPANNER_INSTANCE_ID" "dfo-dev-dc-instance"
     set_default "GCP_SPANNER_DATABASE_NAME" "dfo-dev-dc-db"
+    set_default "REGION" "northamerica-northeast1"
     echo ""
     echo "$TARGET is ready. Run 'just run-local' to start."
 
@@ -307,7 +311,7 @@ clean:
 # ── Deploying ─────────────────────────────────────────
 
 # Tag and push image to Artifact Registry (override tag: just IMAGE_TAG=v1.0 push)
-push: _check-env
+push:
     @echo "Tagging {{IMAGE}} -> {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}..."
     docker tag {{IMAGE}} {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}
     @echo "Pushing to {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}..."
@@ -446,6 +450,9 @@ sync version:
         echo "HEAD already contains website $TAG. Staged the DCP {{version}} submodule pointers; commit them, then run 'git submodule update --init --recursive'."
         exit 0
     fi
+    # .gitattributes keeps README.md ours through this driver; git falls back
+    # to a 3-way merge in a clone that never registered it.
+    git config merge.ours.driver true
     echo "Merging website $TAG into $(git rev-parse --abbrev-ref HEAD)..."
     git merge --no-ff --no-commit -X no-renames \
         -m "chore: sync website $TAG for Data Commons Platform {{version}}" "$WEBSITE" || true
@@ -453,6 +460,7 @@ sync version:
         echo "Error: git merge did not start. See its output above."
         exit 1
     fi
+    just _sync-keep-workflows
     # update-index writes the gitlinks without checking the submodules out,
     # and resolves any submodule conflict the merge raised.
     git update-index --cacheinfo "160000,$MIXER,mixer" --cacheinfo "160000,$IMPORT,import"
@@ -556,17 +564,19 @@ sync-finish:
         echo "No merge in progress. Run 'just sync <dcp-version>' first."
         exit 1
     fi
+    just _sync-keep-workflows
     UNMERGED=$(git diff --name-only --diff-filter=U)
     if [ -n "$UNMERGED" ]; then
         echo "Resolve and stage these files first:"
         echo "$UNMERGED"
         exit 1
     fi
-    # Conflict markers can slip through as rename-detection artifacts.
-    STRAY=$(git diff --cached -S'<<<<<<<' --name-only -- ':!*.md' ':!justfile')
+    # git's whitespace check reports each staged line that starts with a
+    # conflict marker, in every file type. A marker quoted mid-line passes.
+    STRAY=$(git diff --cached --check | grep 'leftover conflict marker' || true)
     if [ -n "$STRAY" ]; then
         echo "═══════════════════════════════════════════════════════"
-        echo " Conflict markers found in merged files:"
+        echo " Conflict markers found in staged files:"
         echo "═══════════════════════════════════════════════════════"
         echo "$STRAY"
         echo ""
@@ -583,6 +593,28 @@ sync-finish:
     just check-overrides "$WEBSITE" "$BASE"
     echo ""
     echo "Sync complete."
+
+# Reset .github/workflows/ in a sync merge to HEAD's and list what upstream changed there
+_sync-keep-workflows:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The fork's CI and deploy workflows are DFO-owned, and any workflow
+    # upstream adds would run here, so a sync takes nothing from upstream
+    # under this directory.
+    DIR=.github/workflows/
+    if git diff --cached --quiet HEAD -- "$DIR" && [ -z "$(git ls-files -u -- "$DIR")" ]; then
+        exit 0
+    fi
+    CHANGED=$(git diff --no-renames --name-status "$(git merge-base HEAD MERGE_HEAD)" MERGE_HEAD -- "$DIR")
+    git reset -q --no-refresh HEAD -- "$DIR"
+    git checkout HEAD -- "$DIR"
+    # Paths upstream added or re-added are untracked now; remove them.
+    while IFS=$'\t' read -r _ path; do
+        if [ -n "$path" ] && ! git cat-file -e "HEAD:$path" 2>/dev/null; then rm -f -- "$path"; fi
+    done <<< "$CHANGED"
+    echo "Left upstream's changes to $DIR out of the merge (A added, M modified, D deleted):"
+    sed 's/^/  /' <<< "$CHANGED"
+    echo "Port any you want into the DFO workflows in a separate PR."
 
 # Abort a failed merge and return to previous state
 sync-abort:
