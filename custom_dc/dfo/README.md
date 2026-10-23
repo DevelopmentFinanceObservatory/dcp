@@ -88,6 +88,16 @@ $ OUTPUT_DIR=/data DC_API_KEY=… MAPS_API_KEY=… just env
 `OUTPUT_DIR` is the only value with no Secret Manager fallback, so set it this way
 (or accept the prompt) when running headless.
 
+`env.list.sample` sets `GCP_PROJECT_ID`, `GCP_SPANNER_INSTANCE_ID`, and
+`GCP_SPANNER_DATABASE_NAME` to the dfo-dev values (`dev-fin-observatory`,
+`dfo-dev-dc-instance`, `dfo-dev-dc-db`), and `just env` fills them in when they
+are empty or missing. The container's
+`run.sh` starts mixer against that Spanner graph on every boot and exits without a
+project, so a local container reads dfo-dev data through your mounted ADC. Your
+account needs Spanner read access (`roles/spanner.databaseReader`) on that
+database. `just run-local`, `just dev`, and `just shell` stop with an error if
+`env.list` lacks any of the three; run `just env` to add them to an older file.
+
 ### 2. Build and run the baked image
 
 ```
@@ -205,7 +215,7 @@ $ cd ../dfo-infra && just deploy <printed-ref>
 
 ## Keeping in sync with upstream
 
-The only files that can conflict on upstream sync are the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`). Everything under `custom_dc/dfo/` and `custom_dc/api_server/` is untouched by upstream.
+An upstream sync can conflict only on upstream-tracked files DFO modifies, adds, or deletes: the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`) and the repo-level files listed in `.dfo-protected-paths`, such as `README.md`, `.gitignore`, `package-lock.json`, and the CI workflows. Everything under `custom_dc/dfo/` and `custom_dc/api_server/` is untouched by upstream.
 
 ### Workflow
 
@@ -219,12 +229,12 @@ The only files that can conflict on upstream sync are the three seam files (`bui
    Merging website v3.5.13 into dev...
    ```
 
-   The recipe pins `mixer` to the release's mixer and `import` to the website's pin. On a clean merge it commits, updates submodules, and runs `check-overrides`. On conflicts it lists them and stops.
+   The recipe pins `mixer` to the release's mixer and `import` to the website's pin. When the release's mixer differs from the website's pin, it resolves the short hash in the `mixer` submodule and requires it on upstream mixer `master`. On a clean merge it commits, checks out the recorded submodule commits, and runs `check-overrides`. On conflicts it lists them and exits 1.
 
 2. **Resolve conflicts:**
 
-   - `just sync-resolve` accepts upstream for everything except paths in `.dfo-protected-paths`, lists the protected files for manual resolution, and finishes the merge when none remain.
-   - After resolving by hand, `git add` the files and run `just sync-finish`. It refuses while conflict markers remain, then commits, updates submodules, and runs `check-overrides`.
+   - `just sync-resolve` accepts upstream for everything except paths in `.dfo-protected-paths` and finishes the merge when no conflicts remain. Otherwise it lists every unmerged file, protected or not, and exits 1.
+   - After resolving by hand, `git add` the files and run `just sync-finish`. It refuses while conflict markers remain, then commits, checks out the recorded submodule commits (`git submodule update --init --recursive`), and runs `check-overrides`.
    - `just sync-abort` aborts and returns to the pre-merge state.
 
 3. **Check seam file changes.** `check-overrides` compares each upstream seam file across the sync, from the previous merge base to the new website commit. If upstream touched `Dockerfile`, `run.sh`, or `nginx.conf`, it prints a warning:

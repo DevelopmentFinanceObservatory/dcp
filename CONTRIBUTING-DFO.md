@@ -49,11 +49,11 @@ git checkout dev
 just sync 1.1.6           # merge the website commit DCP 1.1.6 was built from
 ```
 
-`just sync` stops on conflicts. `just sync-resolve` takes upstream's side for every path outside `.dfo-protected-paths` and leaves the protected ones for you; after resolving those, `git add` them and run `just sync-finish`. `just sync-abort` drops the merge. Once committed, the recipe checks out the submodules and runs `just check-overrides`, which lists the seam files in `.dfo-overridden-files` that upstream changed across the sync.
+`just sync` stops on conflicts. `just sync-resolve` takes upstream's side for every path outside `.dfo-protected-paths` and leaves the protected ones for you. After resolving those, `git add` them and run `just sync-finish`. `just sync-abort` drops the merge. Once committed, the recipe checks out the submodules and runs `just check-overrides`, which lists the seam files in `.dfo-overridden-files` that upstream changed across the sync.
 
 ### Matching a Data Commons Platform release
 
-The website and mixer move as a pair, and the pairing comes from the release image. Each image `gcr.io/datcom-ci/datacommons-services:<version>` records its source commits as the `WEBSITE_HASH` and `MIXER_HASH` build args. A website tag does not settle the mixer: Google can build a release with a mixer newer than the one the tag pins. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` pins mixer `051d8ff`.
+The website and mixer move as a pair, and the pairing comes from the release image. Each image `gcr.io/datcom-ci/datacommons-services:<version>` records its source commits as the `WEBSITE_HASH` and `MIXER_HASH` build args. A website tag pins one mixer, and Google can build a release with a newer one. DCP 1.1.2 was built from website `v3.5.7` with mixer `79627f8`, while `v3.5.7` pins mixer `051d8ff`.
 
 `just dcp-pair <version>` prints the pairing:
 

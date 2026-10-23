@@ -96,7 +96,7 @@ env:
     set_or_prompt() {
         local key="$1" prompt="$2"
         local current
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -z "$current" ]; then
             local value="${!key:-}"   # env-var override (e.g. OUTPUT_DIR=/data just env)
             [ -n "$value" ] || value=$(ask "$prompt")
@@ -120,7 +120,7 @@ env:
     }
     set_from_secret_or_prompt() {
         local key="$1" prompt="$2" filter="$3" current value
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -n "$current" ]; then echo "  $key already set."; return; fi
         value="${!key:-}"   # env-var override wins over Secret Manager
         if [ -n "$value" ]; then
@@ -143,7 +143,7 @@ env:
         # Manager (or env-var override) and leave blank if not found. Used for
         # optional keys whose absence degrades gracefully (e.g. the Search API).
         local key="$1" filter="$2" current value
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -n "$current" ]; then echo "  $key already set."; return; fi
         value="${!key:-}"
         [ -n "$value" ] || value=$(fetch_secret "$filter")
@@ -154,10 +154,27 @@ env:
         fi
         if [ -n "$value" ]; then echo "  Set $key."; else echo "  $key left blank (Search API disabled until set)."; fi
     }
+    set_default() {
+        # Fill an empty or missing key from the env-var override or the dfo-dev default.
+        local key="$1" default="$2" current value
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
+        if [ -n "$current" ]; then echo "  $key already set."; return; fi
+        value="${!key:-$default}"
+        if grep -q "^${key}=$" "$TARGET" 2>/dev/null; then
+            sed -i.bak "s|^${key}=$|${key}=${value}|" "$TARGET" && rm -f "${TARGET}.bak"
+        else
+            echo "${key}=${value}" >> "$TARGET"
+        fi
+        echo "  Set $key=$value."
+    }
     set_from_secret_or_prompt "DC_API_KEY" "DC API key" "dfo-dev-dc-api-key"
     set_from_secret_or_prompt "MAPS_API_KEY" "Maps API key" "dfo-dev-dc-google-maps-api-key"
     set_from_secret_optional "GEMINI_API_KEY" "dfo-dev-gemini-api-key"
     set_or_prompt "OUTPUT_DIR" "Output directory (absolute path)"
+    # run.sh points mixer at the Spanner graph on every boot and exits without a project.
+    set_default "GCP_PROJECT_ID" "$PROJECT"
+    set_default "GCP_SPANNER_INSTANCE_ID" "dfo-dev-dc-instance"
+    set_default "GCP_SPANNER_DATABASE_NAME" "dfo-dev-dc-db"
     echo ""
     echo "$TARGET is ready. Run 'just run-local' to start."
 
@@ -360,7 +377,7 @@ dcp-pair version:
     set -euo pipefail
     # Each release image records its source commits as WEBSITE_HASH and
     # MIXER_HASH env build args in the image config.
-    MANIFEST=$(curl -fsS -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+    MANIFEST=$(curl -fsS --max-time 30 -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
         "{{DCP_REGISTRY}}/manifests/{{version}}") \
         || { echo "Error: no datacommons-services image for DCP {{version}}." >&2; exit 1; }
     CONFIG=$(jq -r '.config.digest // empty' <<< "$MANIFEST")
@@ -368,7 +385,7 @@ dcp-pair version:
         echo "Error: the DCP {{version}} manifest has no config digest." >&2
         exit 1
     fi
-    ENV=$(curl -fsSL "{{DCP_REGISTRY}}/blobs/$CONFIG" | jq -r '.config.Env[]') \
+    ENV=$(curl -fsSL --max-time 30 "{{DCP_REGISTRY}}/blobs/$CONFIG" | jq -r '.config.Env[]') \
         || { echo "Error: could not read the DCP {{version}} image config." >&2; exit 1; }
     for ARG in WEBSITE_HASH MIXER_HASH; do
         VALUE=$(sed -n "s/^$ARG=//p" <<< "$ENV")
@@ -407,11 +424,17 @@ sync version:
     if [[ "$PINNED_MIXER" == "$MIXER_HASH"* ]]; then
         MIXER=$PINNED_MIXER
     else
-        MIXER=$(curl -fsS "https://api.github.com/repos/datacommonsorg/mixer/commits/$MIXER_HASH" | jq -r '.sha // empty') || true
-        if ! [[ "$MIXER" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Error: could not resolve mixer commit $MIXER_HASH in datacommonsorg/mixer."
-            exit 1
-        fi
+        # Resolve the short hash in the mixer submodule and require it on
+        # upstream master, which every later submodule checkout fetches from.
+        MIXER_URL=$(git config -f .gitmodules submodule.mixer.url)
+        git submodule update --init mixer \
+            || { echo "Error: could not check out the mixer submodule."; exit 1; }
+        git -C mixer fetch -q "$MIXER_URL" master \
+            || { echo "Error: could not fetch master from $MIXER_URL."; exit 1; }
+        MIXER=$(git -C mixer rev-parse --verify -q "$MIXER_HASH^{commit}") \
+            || { echo "Error: mixer commit $MIXER_HASH is not in $MIXER_URL, or the short hash is ambiguous."; exit 1; }
+        git -C mixer merge-base --is-ancestor "$MIXER" FETCH_HEAD \
+            || { echo "Error: mixer commit $MIXER_HASH is not on master in $MIXER_URL."; exit 1; }
         echo "Website $TAG pins mixer ${PINNED_MIXER:0:7}; DCP {{version}} ships mixer $MIXER_HASH. Pinning $MIXER_HASH."
     fi
     if git merge-base --is-ancestor "$WEBSITE" HEAD; then
@@ -420,7 +443,7 @@ sync version:
             exit 0
         fi
         git update-index --cacheinfo "160000,$MIXER,mixer" --cacheinfo "160000,$IMPORT,import"
-        echo "HEAD already contains website $TAG. Staged the DCP {{version}} submodule pointers; commit them, then run 'just submodules'."
+        echo "HEAD already contains website $TAG. Staged the DCP {{version}} submodule pointers; commit them, then run 'git submodule update --init --recursive'."
         exit 0
     fi
     echo "Merging website $TAG into $(git rev-parse --abbrev-ref HEAD)..."
@@ -450,6 +473,7 @@ sync version:
     echo "  just sync-resolve    # accept upstream for most, protect DFO-modified files"
     echo "  just sync-finish     # commit once you have resolved and staged every file"
     echo "  just sync-abort      # abort merge and go back to previous state"
+    exit 1
 
 # Accept upstream for conflicts outside .dfo-protected-paths, then finish if none remain
 sync-resolve:
@@ -483,62 +507,46 @@ sync-resolve:
         done <<< "$PROTECTED"
         return 1
     }
-    # Categorize all conflicts
-    ALL_CONFLICTS=$(git status --porcelain | grep "^UU\|^AA\|^UD\|^DU\|^DD\|^AU\|^UA" || true)
+    UNMERGED_PATTERN='^(UU|AA|UD|DU|DD|AU|UA) '
+    ALL_CONFLICTS=$(git status --porcelain | grep -E "$UNMERGED_PATTERN" || true)
     AUTO_COUNT=0
-    REVIEW_LIST=""
     while IFS= read -r line; do
         [ -z "$line" ] && continue
         status="${line:0:2}"
         file="${line:3}"
-        if is_protected "$file"; then
-            REVIEW_LIST="$REVIEW_LIST"$'\n'"  [$status] $file"
-            continue
-        fi
+        is_protected "$file" && continue
         case "$status" in
-            "UU"|"AA")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file"
-                ((AUTO_COUNT++)) || true
-                ;;
-            "UD")
-                git rm --force "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "DU")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "DD")
-                git rm --force "$file" 2>/dev/null || git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "UA"|"AU")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-        esac
+            UU|AA|DU|UA|AU) git checkout --theirs -- "$file" 2>/dev/null && git add -- "$file" ;;
+            UD) git rm -q --force -- "$file" 2>/dev/null ;;
+            DD) git rm -q --force -- "$file" 2>/dev/null || git add -- "$file" 2>/dev/null ;;
+        esac && ((++AUTO_COUNT)) || true
     done <<< "$ALL_CONFLICTS"
     echo "Auto-resolved $AUTO_COUNT files using upstream version."
     echo ""
-    # Report protected files that still need review
-    REMAINING=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
-    REVIEW_LIST=$(echo "$REVIEW_LIST" | sed '/^$/d')
-    if [ -n "$REMAINING" ] || [ -n "$REVIEW_LIST" ]; then
-        echo "═══════════════════════════════════════════════════════"
-        echo " Protected files needing manual review:"
-        echo "═══════════════════════════════════════════════════════"
-        if [ -n "$REVIEW_LIST" ]; then
-            echo "$REVIEW_LIST"
-        fi
-        echo ""
-        echo "Protected paths loaded from: $PROTECTED_FILE"
-        echo ""
-        echo "Resolve these manually, then run:"
-        echo "  git add <files>"
-        echo "  just sync-finish"
-    else
+    # Every path still unmerged: protected ones, plus any auto-resolution that failed.
+    REMAINING=$(git status --porcelain | grep -E "$UNMERGED_PATTERN" || true)
+    if [ -z "$REMAINING" ]; then
         just sync-finish
+        exit 0
     fi
+    echo "═══════════════════════════════════════════════════════"
+    echo " $(wc -l <<< "$REMAINING" | tr -d ' ') files needing manual resolution:"
+    echo "═══════════════════════════════════════════════════════"
+    while IFS= read -r line; do
+        file="${line:3}"
+        if is_protected "$file"; then
+            echo "  [${line:0:2}] $file  (protected)"
+        else
+            echo "  [${line:0:2}] $file  (could not take upstream's version)"
+        fi
+    done <<< "$REMAINING"
+    echo ""
+    echo "Protected paths loaded from: $PROTECTED_FILE"
+    echo ""
+    echo "Resolve these manually, then run:"
+    echo "  git add <files>"
+    echo "  just sync-finish"
+    exit 1
 
 # Commit a resolved sync merge, check out its submodules, and check DFO seam files
 sync-finish:
@@ -570,7 +578,7 @@ sync-finish:
     git commit --no-edit
     echo ""
     echo "Updating submodules..."
-    ./scripts/update_git_submodules.sh
+    git submodule update --init --recursive
     echo ""
     just check-overrides "$WEBSITE" "$BASE"
     echo ""
@@ -673,6 +681,13 @@ _check-env:
         echo "Run 'just setup' or 'just env' first."
         exit 1
     fi
+    # run.sh exits at boot without these.
+    for KEY in GCP_PROJECT_ID GCP_SPANNER_INSTANCE_ID GCP_SPANNER_DATABASE_NAME; do
+        if ! grep -q "^${KEY}=." "{{ENV_FILE}}"; then
+            echo "Error: {{ENV_FILE}} has no $KEY. Run 'just env' to fill in the dfo-dev Spanner settings."
+            exit 1
+        fi
+    done
 
 _check-gcloud:
     #!/usr/bin/env bash
