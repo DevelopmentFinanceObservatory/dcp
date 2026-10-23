@@ -10,7 +10,7 @@ import {
 } from './optionCoverage';
 
 // Minimal option shape mirroring the engine's SlotOption/EntityOption: a label
-// plus an optional Coverage (see custom_dc/api_server/src/search/models.py).
+// plus an optional Coverage (see the apis repo's src/search/models/coverage.py).
 type Opt = { label: string; dcid: string; coverage?: any };
 
 function opt(label: string, dcid: string, coverage?: any): Opt {

@@ -2,7 +2,7 @@
  * Search engine contract: TypeScript mirror.
  *
  * Single source of truth for every consumer. These types mirror the shipped
- * engine contract in `custom_dc/api_server/src/search/models.py` (the authoritative
+ * engine contract in the apis repo's `src/search/models/` (the authoritative
  * pydantic models; live schema at `GET /api/search/schema`). The engine owns the
  * contract; we consume it. When the models and these types diverge, the models
  * win and these types must be updated (and the schema_version bumped if MAJOR).

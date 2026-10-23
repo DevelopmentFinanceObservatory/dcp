@@ -77,8 +77,8 @@ Manager **Secret Accessor** role on those secrets — if a key can't be fetched,
 the recipe prompts for it instead. The resulting `env.list` is gitignored; never
 commit it.
 
-Any value can be supplied as an environment variable to skip its prompt (and, for
-the keys, to override Secret Manager) — so `just env` runs fully non-interactively
+Any prompted value can be supplied as an environment variable to skip its prompt
+(and, for the keys, to override Secret Manager) — so `just env` runs fully non-interactively
 in CI:
 
 ```
@@ -87,6 +87,22 @@ $ OUTPUT_DIR=/data DC_API_KEY=… MAPS_API_KEY=… just env
 
 `OUTPUT_DIR` is the only value with no Secret Manager fallback, so set it this way
 (or accept the prompt) when running headless.
+
+`env.list.sample` sets `GCP_PROJECT_ID`, `GCP_SPANNER_INSTANCE_ID`,
+`GCP_SPANNER_DATABASE_NAME`, and `REGION` to the dfo-dev values
+(`dev-fin-observatory`, `dfo-dev-dc-instance`, `dfo-dev-dc-db`,
+`northamerica-northeast1`), and `just env` fills them in when they are empty or
+missing. It takes these four from fixed values and ignores the shell environment,
+so the project, instance, and database always name the same graph. The container's
+`run.sh` starts mixer against that Spanner graph on every boot and exits without a
+project, so a local container reads dfo-dev data through your mounted ADC. It also
+passes the project to mixer as `--host_project`, and mixer then embeds query terms
+through Vertex AI in `REGION` (us-central1 when `REGION` is empty). The account
+behind your ADC needs two roles on `dev-fin-observatory`:
+`roles/spanner.databaseReader` to read the graph and `roles/aiplatform.user` to
+call the embedding model. `just run-local`, `just dev`, and `just shell` stop with
+an error if `env.list` lacks the Spanner settings; run `just env` to add them to
+an older file.
 
 ### 2. Build and run the baked image
 
@@ -205,44 +221,29 @@ $ cd ../dfo-infra && just deploy <printed-ref>
 
 ## Keeping in sync with upstream
 
-The only files that can conflict on upstream sync are the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`). Everything under `custom_dc/dfo/` and `custom_dc/api_server/` is untouched by upstream.
+An upstream sync can conflict only on upstream-tracked files DFO modifies, adds, or deletes: the three seam files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf`) and the repo-level files listed in `.dfo-protected-paths`, such as `README.md`, `.gitignore`, `package-lock.json`, and the CI workflows. Everything under `custom_dc/dfo/` is untouched by upstream. `.github/workflows/` is DFO-owned too, and a sync keeps it as it was: `just sync` and `just sync-finish` leave every workflow upstream adds, changes, or deletes out of the merge and list it.
 
 ### Workflow
 
-1. **Check what changed:**
+`dev` tracks Data Commons Platform releases. Each release image records the website and mixer commits it was built from, and `just sync` reads them from there.
+
+1. **Merge the release's website commit:**
 
    ```
-   $ just sync
-   Commits behind upstream/customdc_stable: 12
+   $ just sync 1.1.6
+   DCP 1.1.6: website 9852134, mixer 8118587
+   Merging website v3.5.13 into dev...
    ```
 
-2. **Merge:**
+   The recipe pins `mixer` to the release's mixer and `import` to the website's pin. When the release's mixer differs from the website's pin, it resolves the short hash in the `mixer` submodule and requires it on upstream mixer `master`. On a clean merge it commits, checks out the recorded submodule commits, and runs `check-overrides`. On conflicts it lists them and exits 1.
 
-   ```
-   $ just sync-auto
-   ```
+2. **Resolve conflicts:**
 
-   On a clean merge, this updates submodules and runs `check-overrides`. On conflicts, it lists them and offers options.
+   - `just sync-resolve` accepts upstream for everything except paths in `.dfo-protected-paths` and finishes the merge when no conflicts remain. Otherwise it lists every unmerged file, protected or not, and exits 1.
+   - After resolving by hand, `git add` the files and run `just sync-finish`. It refuses while conflict markers remain, then commits, checks out the recorded submodule commits (`git submodule update --init --recursive`), and runs `check-overrides`.
+   - `just sync-abort` aborts and returns to the pre-merge state.
 
-3. **Resolve conflicts:**
-
-   - `just sync-resolve` — accepts upstream for everything except paths in `.dfo-protected-paths`; lists the protected files for manual resolution.
-   - `just sync-theirs` — accepts upstream for all conflicts. Use when none of the conflicting files are DFO-owned.
-   - `just sync-abort` — abort and return to the pre-merge state.
-
-4. **Check for stray conflict markers:**
-
-   ```
-   $ just check-markers
-   ```
-
-5. **Check seam file changes:**
-
-   ```
-   $ just check-overrides
-   ```
-
-   This compares each upstream seam file against its last merge base. If an upstream commit touched `Dockerfile`, `run.sh`, or `nginx.conf`, it prints a warning:
+3. **Check seam file changes.** `check-overrides` compares each upstream seam file across the sync, from the previous merge base to the new website commit. If upstream touched `Dockerfile`, `run.sh`, or `nginx.conf`, it prints a warning:
 
    ```
    WARNING  build/cdc_services/run.sh
@@ -250,7 +251,7 @@ The only files that can conflict on upstream sync are the three seam files (`bui
       Changes: 1 file changed, 3 insertions(+)
    ```
 
-   When this fires, read the upstream diff (`git diff <merge-base>..upstream/customdc_stable -- build/cdc_services/run.sh`), confirm the DFO hooks are still in place and still correct, then rebuild and run the e2e check.
+   When this fires, read the upstream diff it prints (`git diff <base>..<website> -- build/cdc_services/run.sh`), confirm the DFO hooks are still in place and still correct, then rebuild and run the e2e check. To preview a sync, run `just check-overrides <website-commit>`.
 
 `.dfo-protected-paths` lists the paths `sync-resolve` protects from auto-resolution. `.dfo-overridden-files` maps each seam file to its DFO delegate(s), which is what `check-overrides` reads.
 
@@ -282,7 +283,7 @@ the same supervisor.
 
 The subshell loops forever and never exits on its own, so `run.sh`'s `wait -n` never sees it die. A Next.js crash restarts Next in ~2 seconds without affecting the mixer, website, or MCP process. The DC site stays up.
 
-A crash in a DC service (mixer, website, NL, or MCP) still hits `wait -n` and exits the container, triggering a Cloud Run restart. That is upstream's intended behaviour and is unchanged.
+A crash in a DC service (mixer, Envoy, website, or MCP) still hits `wait -n` and exits the container, triggering a Cloud Run restart. That is upstream's intended behaviour and is unchanged.
 
 ---
 

@@ -13,7 +13,8 @@ IMAGE        := IMAGE_NAME + ":" + IMAGE_TAG
 DOCKERFILE   := "build/cdc_services/Dockerfile"
 ENV_FILE     := "custom_dc/dfo/env.list"
 ENV_SAMPLE   := "custom_dc/dfo/env.list.sample"
-UPSTREAM_BRANCH := "customdc_stable"
+# Registry path of the Data Commons Platform release images `just sync` reads.
+DCP_REGISTRY := "https://gcr.io/v2/datcom-ci/datacommons-services"
 
 # Deployment tier. Selects the image tag prefix (dfo-<tier>-<sha>) and the
 # branch `deploy` expects to be on. Override for a prod cut:
@@ -95,7 +96,7 @@ env:
     set_or_prompt() {
         local key="$1" prompt="$2"
         local current
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -z "$current" ]; then
             local value="${!key:-}"   # env-var override (e.g. OUTPUT_DIR=/data just env)
             [ -n "$value" ] || value=$(ask "$prompt")
@@ -119,7 +120,7 @@ env:
     }
     set_from_secret_or_prompt() {
         local key="$1" prompt="$2" filter="$3" current value
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -n "$current" ]; then echo "  $key already set."; return; fi
         value="${!key:-}"   # env-var override wins over Secret Manager
         if [ -n "$value" ]; then
@@ -142,7 +143,7 @@ env:
         # Manager (or env-var override) and leave blank if not found. Used for
         # optional keys whose absence degrades gracefully (e.g. the Search API).
         local key="$1" filter="$2" current value
-        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2-)
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
         if [ -n "$current" ]; then echo "  $key already set."; return; fi
         value="${!key:-}"
         [ -n "$value" ] || value=$(fetch_secret "$filter")
@@ -153,10 +154,31 @@ env:
         fi
         if [ -n "$value" ]; then echo "  Set $key."; else echo "  $key left blank (Search API disabled until set)."; fi
     }
+    set_default() {
+        # Fill an empty or missing key with the fixed dfo-dev value. The shell
+        # environment is ignored, so a stray export cannot pair one project's
+        # id with another's instance.
+        local key="$1" value="$2" current
+        current=$(grep -s "^${key}=" "$TARGET" | head -1 | cut -d= -f2- || true)
+        if [ -n "$current" ]; then echo "  $key already set."; return; fi
+        if grep -q "^${key}=$" "$TARGET" 2>/dev/null; then
+            sed -i.bak "s|^${key}=$|${key}=${value}|" "$TARGET" && rm -f "${TARGET}.bak"
+        else
+            echo "${key}=${value}" >> "$TARGET"
+        fi
+        echo "  Set $key=$value."
+    }
     set_from_secret_or_prompt "DC_API_KEY" "DC API key" "dfo-dev-dc-api-key"
     set_from_secret_or_prompt "MAPS_API_KEY" "Maps API key" "dfo-dev-dc-google-maps-api-key"
     set_from_secret_optional "GEMINI_API_KEY" "dfo-dev-gemini-api-key"
     set_or_prompt "OUTPUT_DIR" "Output directory (absolute path)"
+    # run.sh points mixer at the Spanner graph on every boot and exits without a
+    # project. It passes --host_project, so mixer also embeds query terms through
+    # Vertex AI in REGION, and calls us-central1 when REGION is empty.
+    set_default "GCP_PROJECT_ID" "$PROJECT"
+    set_default "GCP_SPANNER_INSTANCE_ID" "dfo-dev-dc-instance"
+    set_default "GCP_SPANNER_DATABASE_NAME" "dfo-dev-dc-db"
+    set_default "REGION" "northamerica-northeast1"
     echo ""
     echo "$TARGET is ready. Run 'just run-local' to start."
 
@@ -289,7 +311,7 @@ clean:
 # ── Deploying ─────────────────────────────────────────
 
 # Tag and push image to Artifact Registry (override tag: just IMAGE_TAG=v1.0 push)
-push: _check-env
+push:
     @echo "Tagging {{IMAGE}} -> {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}..."
     docker tag {{IMAGE}} {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}
     @echo "Pushing to {{DOCKER_REGISTRY}}:{{IMAGE_TAG}}..."
@@ -353,156 +375,122 @@ deploy: build
 
 # ── Upstream Sync ─────────────────────────────────────
 
-# Fetch upstream and show what's changed since last sync
-sync:
+# Print the website and mixer commits a DCP release image was built from (e.g. just dcp-pair 1.1.6)
+dcp-pair version:
     #!/usr/bin/env bash
     set -euo pipefail
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    echo "Fetching from upstream..."
-    git fetch upstream
-    echo ""
-    echo "Current branch: $CURRENT_BRANCH"
-    BEHIND=$(git rev-list --count HEAD..upstream/{{UPSTREAM_BRANCH}})
-    echo "Commits behind upstream/{{UPSTREAM_BRANCH}}: $BEHIND"
-    echo ""
-    if [ "$BEHIND" -eq 0 ]; then
-        echo "Already up to date."
-    else
-        echo "To merge, run one of:"
-        echo "  just sync-auto       # merge, keep both sides (may need manual conflict resolution)"
-        echo "  just sync-theirs     # merge, prefer upstream for conflicts (safe for most files)"
-        echo "  just sync-abort      # abort a failed merge and start over"
+    # Each release image records its source commits as WEBSITE_HASH and
+    # MIXER_HASH env build args in the image config.
+    MANIFEST=$(curl -fsS --max-time 30 -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+        "{{DCP_REGISTRY}}/manifests/{{version}}") \
+        || { echo "Error: no datacommons-services image for DCP {{version}}." >&2; exit 1; }
+    CONFIG=$(jq -r '.config.digest // empty' <<< "$MANIFEST")
+    if [ -z "$CONFIG" ]; then
+        echo "Error: the DCP {{version}} manifest has no config digest." >&2
+        exit 1
     fi
-
-# Merge upstream, stop on conflicts for manual resolution
-sync-auto:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    echo "Fetching from upstream..."
-    git fetch upstream
-    echo ""
-    echo "Merging upstream/{{UPSTREAM_BRANCH}} into $CURRENT_BRANCH..."
-    if git merge -X no-renames upstream/{{UPSTREAM_BRANCH}}; then
-        echo ""
-        # Check for conflict markers that slipped into committed files (rename detection artifacts)
-        STRAY=$(git diff HEAD~1 HEAD -S'<<<<<<<' --name-only 2>/dev/null || true)
-        if [ -n "$STRAY" ]; then
-            echo "═══════════════════════════════════════════════════════"
-            echo " WARNING  Conflict markers found in merged files:"
-            echo "═══════════════════════════════════════════════════════"
-            echo "$STRAY"
-            echo ""
-            echo "Fix these files, then: git add <files> && git commit --amend --no-edit"
-        else
-            echo "Updating submodules..."
-            ./scripts/update_git_submodules.sh
-            echo ""
-            just check-overrides
-            echo ""
-            echo "Sync complete. No conflicts."
+    ENV=$(curl -fsSL --max-time 30 "{{DCP_REGISTRY}}/blobs/$CONFIG" | jq -r '.config.Env[]') \
+        || { echo "Error: could not read the DCP {{version}} image config." >&2; exit 1; }
+    for ARG in WEBSITE_HASH MIXER_HASH; do
+        VALUE=$(sed -n "s/^$ARG=//p" <<< "$ENV")
+        if ! [[ "$VALUE" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "Error: the DCP {{version}} image has no usable $ARG build arg (got '$VALUE')." >&2
+            exit 1
         fi
-    else
-        echo ""
-        CONFLICTS=$(git diff --name-only --diff-filter=U)
-        COUNT=$(echo "$CONFLICTS" | wc -l | tr -d ' ')
-        echo "═══════════════════════════════════════════"
-        echo " $COUNT files with conflicts"
-        echo "═══════════════════════════════════════════"
-        echo ""
-        echo "$CONFLICTS"
-        echo ""
-        echo "Options:"
-        echo "  just sync-theirs     # accept upstream version for ALL conflicts"
-        echo "  just sync-resolve    # accept upstream for most, protect DFO-modified files"
-        echo "  just sync-abort      # abort merge and go back to previous state"
-    fi
+        echo "$(tr 'A-Z' 'a-z' <<< "${ARG%_HASH}")=$VALUE"
+    done
 
-# Merge upstream, accept their version for all conflicts
-sync-theirs:
+# Merge the website commit a DCP release was built from and pin its submodules (e.g. just sync 1.1.6)
+sync version:
     #!/usr/bin/env bash
     set -euo pipefail
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    # Start merge if not already mid-merge
-    if git rev-parse --verify MERGE_HEAD > /dev/null 2>&1; then
-        echo "Continuing in-progress merge..."
+    if git rev-parse --verify -q MERGE_HEAD > /dev/null; then
+        echo "A merge is already in progress. Finish it with 'just sync-finish' or drop it with 'just sync-abort'."
+        exit 1
+    fi
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "Error: commit or set aside local changes before syncing."
+        exit 1
+    fi
+    PAIR=$(just dcp-pair {{version}})
+    WEBSITE_HASH=$(sed -n 's/^website=//p' <<< "$PAIR")
+    MIXER_HASH=$(sed -n 's/^mixer=//p' <<< "$PAIR")
+    echo "DCP {{version}}: website $WEBSITE_HASH, mixer $MIXER_HASH"
+    echo "Fetching from upstream..."
+    git fetch --tags upstream
+    WEBSITE=$(git rev-parse --verify -q "$WEBSITE_HASH^{commit}") \
+        || { echo "Error: website commit $WEBSITE_HASH is not in upstream."; exit 1; }
+    TAG=$(git describe --tags --exact-match "$WEBSITE" 2>/dev/null || echo "$WEBSITE_HASH")
+    # The release image can run a newer mixer than the one the website commit
+    # pins. Pin the image's mixer and the website's import.
+    IMPORT=$(git rev-parse "$WEBSITE:import")
+    PINNED_MIXER=$(git rev-parse "$WEBSITE:mixer")
+    if [[ "$PINNED_MIXER" == "$MIXER_HASH"* ]]; then
+        MIXER=$PINNED_MIXER
     else
-        echo "Fetching from upstream..."
-        git fetch upstream
+        # Resolve the short hash in the mixer submodule and require it on
+        # upstream master, which every later submodule checkout fetches from.
+        MIXER_URL=$(git config -f .gitmodules submodule.mixer.url)
+        git submodule update --init mixer \
+            || { echo "Error: could not check out the mixer submodule."; exit 1; }
+        git -C mixer fetch -q "$MIXER_URL" master \
+            || { echo "Error: could not fetch master from $MIXER_URL."; exit 1; }
+        MIXER=$(git -C mixer rev-parse --verify -q "$MIXER_HASH^{commit}") \
+            || { echo "Error: mixer commit $MIXER_HASH is not in $MIXER_URL, or the short hash is ambiguous."; exit 1; }
+        git -C mixer merge-base --is-ancestor "$MIXER" FETCH_HEAD \
+            || { echo "Error: mixer commit $MIXER_HASH is not on master in $MIXER_URL."; exit 1; }
+        echo "Website $TAG pins mixer ${PINNED_MIXER:0:7}; DCP {{version}} ships mixer $MIXER_HASH. Pinning $MIXER_HASH."
+    fi
+    if git merge-base --is-ancestor "$WEBSITE" HEAD; then
+        if [ "$(git rev-parse HEAD:mixer)" = "$MIXER" ] && [ "$(git rev-parse HEAD:import)" = "$IMPORT" ]; then
+            echo "Already synced to DCP {{version}}."
+            exit 0
+        fi
+        git update-index --cacheinfo "160000,$MIXER,mixer" --cacheinfo "160000,$IMPORT,import"
+        echo "HEAD already contains website $TAG. Staged the DCP {{version}} submodule pointers; commit them, then run 'git submodule update --init --recursive'."
+        exit 0
+    fi
+    # .gitattributes keeps README.md ours through this driver; git falls back
+    # to a 3-way merge in a clone that never registered it.
+    git config merge.ours.driver true
+    echo "Merging website $TAG into $(git rev-parse --abbrev-ref HEAD)..."
+    git merge --no-ff --no-commit -X no-renames \
+        -m "chore: sync website $TAG for Data Commons Platform {{version}}" "$WEBSITE" || true
+    if ! git rev-parse --verify -q MERGE_HEAD > /dev/null; then
+        echo "Error: git merge did not start. See its output above."
+        exit 1
+    fi
+    just _sync-keep-workflows
+    # update-index writes the gitlinks without checking the submodules out,
+    # and resolves any submodule conflict the merge raised.
+    git update-index --cacheinfo "160000,$MIXER,mixer" --cacheinfo "160000,$IMPORT,import"
+    CONFLICTS=$(git diff --name-only --diff-filter=U)
+    if [ -z "$CONFLICTS" ]; then
         echo ""
-        echo "Merging upstream/{{UPSTREAM_BRANCH}} into $CURRENT_BRANCH..."
-        git merge -X no-renames upstream/{{UPSTREAM_BRANCH}} || true
+        just sync-finish
+        exit 0
     fi
     echo ""
-    # Resolve each conflict type
-    # UU = both modified, AA = both added — accept theirs
-    UU_AA=$(git status --porcelain | grep "^UU\|^AA" | awk '{print $2}' | grep -v "^import$" || true)
-    if [ -n "$UU_AA" ]; then
-        COUNT=$(echo "$UU_AA" | wc -l | tr -d ' ')
-        echo "Accepting upstream version for $COUNT conflicted files..."
-        echo "$UU_AA" | while read -r file; do
-            git checkout --theirs -- "$file" 2>/dev/null && git add "$file"
-        done
-        echo ""
-    fi
-    # UD = deleted by upstream, modified by us — remove
-    UD=$(git status --porcelain | grep "^UD" | awk '{print $2}' || true)
-    if [ -n "$UD" ]; then
-        echo "Removing files deleted by upstream..."
-        echo "$UD" | while read -r file; do
-            git rm --force "$file" 2>/dev/null || true
-        done
-        echo ""
-    fi
-    # DU = deleted by us, modified by upstream — accept theirs
-    DU=$(git status --porcelain | grep "^DU" | awk '{print $2}' || true)
-    if [ -n "$DU" ]; then
-        echo "Restoring files upstream modified that we had deleted..."
-        echo "$DU" | while read -r file; do
-            git checkout --theirs -- "$file" 2>/dev/null && git add "$file" 2>/dev/null || true
-        done
-        echo ""
-    fi
-    # DD = both deleted (rename conflicts) — just remove
-    DD=$(git status --porcelain | grep "^DD" | awk '{print $2}' || true)
-    if [ -n "$DD" ]; then
-        echo "Removing files deleted by both sides..."
-        echo "$DD" | while read -r file; do
-            git rm --force "$file" 2>/dev/null || git add "$file" 2>/dev/null || true
-        done
-        echo ""
-    fi
-    # Complete the merge
-    if git rev-parse --verify MERGE_HEAD > /dev/null 2>&1; then
-        git commit --no-edit
-    fi
+    echo "═══════════════════════════════════════════"
+    echo " $(wc -l <<< "$CONFLICTS" | tr -d ' ') files with conflicts"
+    echo "═══════════════════════════════════════════"
     echo ""
-    # Check for conflict markers that slipped into committed files (rename detection artifacts)
-    STRAY=$(git diff HEAD~1 HEAD -S'<<<<<<<' --name-only 2>/dev/null || true)
-    if [ -n "$STRAY" ]; then
-        echo "═══════════════════════════════════════════════════════"
-        echo " WARNING  Conflict markers found in merged files:"
-        echo "═══════════════════════════════════════════════════════"
-        echo "$STRAY"
-        echo ""
-        echo "Fix these files, then: git add <files> && git commit --amend --no-edit"
-    else
-        echo "Updating submodules..."
-        ./scripts/update_git_submodules.sh
-        echo ""
-        just check-overrides
-        echo ""
-        echo "Sync complete. All conflicts resolved using upstream versions."
-    fi
+    echo "$CONFLICTS"
+    echo ""
+    echo "Options:"
+    echo "  just sync-resolve    # accept upstream for most, protect DFO-modified files"
+    echo "  just sync-finish     # commit once you have resolved and staged every file"
+    echo "  just sync-abort      # abort merge and go back to previous state"
+    exit 1
 
-# Merge upstream, accept theirs for most files but protect DFO-customized paths
+# Accept upstream for conflicts outside .dfo-protected-paths, then finish if none remain
 sync-resolve:
     #!/usr/bin/env bash
     set -euo pipefail
     PROTECTED_FILE=".dfo-protected-paths"
     # Check if we're mid-merge
     if ! git rev-parse --verify MERGE_HEAD > /dev/null 2>&1; then
-        echo "No merge in progress. Run 'just sync-auto' first."
+        echo "No merge in progress. Run 'just sync <dcp-version>' first."
         exit 1
     fi
     # Load protected paths (strip comments and blanks)
@@ -527,83 +515,106 @@ sync-resolve:
         done <<< "$PROTECTED"
         return 1
     }
-    # Categorize all conflicts
-    ALL_CONFLICTS=$(git status --porcelain | grep "^UU\|^AA\|^UD\|^DU\|^DD\|^AU\|^UA" || true)
+    UNMERGED_PATTERN='^(UU|AA|UD|DU|DD|AU|UA) '
+    ALL_CONFLICTS=$(git status --porcelain | grep -E "$UNMERGED_PATTERN" || true)
     AUTO_COUNT=0
-    REVIEW_LIST=""
     while IFS= read -r line; do
         [ -z "$line" ] && continue
         status="${line:0:2}"
         file="${line:3}"
-        if is_protected "$file"; then
-            REVIEW_LIST="$REVIEW_LIST"$'\n'"  [$status] $file"
-            continue
-        fi
+        is_protected "$file" && continue
         case "$status" in
-            "UU"|"AA")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file"
-                ((AUTO_COUNT++)) || true
-                ;;
-            "UD")
-                git rm --force "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "DU")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "DD")
-                git rm --force "$file" 2>/dev/null || git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-            "UA"|"AU")
-                git checkout --theirs -- "$file" 2>/dev/null && git add "$file" 2>/dev/null || true
-                ((AUTO_COUNT++)) || true
-                ;;
-        esac
+            UU|AA|DU|UA|AU) git checkout --theirs -- "$file" 2>/dev/null && git add -- "$file" ;;
+            UD) git rm -q --force -- "$file" 2>/dev/null ;;
+            DD) git rm -q --force -- "$file" 2>/dev/null || git add -- "$file" 2>/dev/null ;;
+        esac && ((++AUTO_COUNT)) || true
     done <<< "$ALL_CONFLICTS"
     echo "Auto-resolved $AUTO_COUNT files using upstream version."
     echo ""
-    # Report protected files that still need review
-    REMAINING=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
-    REVIEW_LIST=$(echo "$REVIEW_LIST" | sed '/^$/d')
-    if [ -n "$REMAINING" ] || [ -n "$REVIEW_LIST" ]; then
-        echo "═══════════════════════════════════════════════════════"
-        echo " Protected files needing manual review:"
-        echo "═══════════════════════════════════════════════════════"
-        if [ -n "$REVIEW_LIST" ]; then
-            echo "$REVIEW_LIST"
-        fi
-        echo ""
-        echo "Protected paths loaded from: $PROTECTED_FILE"
-        echo ""
-        echo "Resolve these manually, then run:"
-        echo "  git add <files>"
-        echo "  git commit --no-edit"
-        echo "  just check-markers"
-        echo "  just submodules"
-        echo "  just check-overrides"
-    else
-        git commit --no-edit
-        echo ""
-        # Check for conflict markers that slipped into committed files (rename detection artifacts)
-        STRAY=$(git diff HEAD~1 HEAD -S'<<<<<<<' --name-only 2>/dev/null || true)
-        if [ -n "$STRAY" ]; then
-            echo "═══════════════════════════════════════════════════════"
-            echo " WARNING  Conflict markers found in merged files:"
-            echo "═══════════════════════════════════════════════════════"
-            echo "$STRAY"
-            echo ""
-            echo "Fix these files, then: git add <files> && git commit --amend --no-edit"
-        else
-            echo "Updating submodules..."
-            ./scripts/update_git_submodules.sh
-            echo ""
-            just check-overrides
-            echo ""
-            echo "Sync complete."
-        fi
+    # Every path still unmerged: protected ones, plus any auto-resolution that failed.
+    REMAINING=$(git status --porcelain | grep -E "$UNMERGED_PATTERN" || true)
+    if [ -z "$REMAINING" ]; then
+        just sync-finish
+        exit 0
     fi
+    echo "═══════════════════════════════════════════════════════"
+    echo " $(wc -l <<< "$REMAINING" | tr -d ' ') files needing manual resolution:"
+    echo "═══════════════════════════════════════════════════════"
+    while IFS= read -r line; do
+        file="${line:3}"
+        if is_protected "$file"; then
+            echo "  [${line:0:2}] $file  (protected)"
+        else
+            echo "  [${line:0:2}] $file  (could not take upstream's version)"
+        fi
+    done <<< "$REMAINING"
+    echo ""
+    echo "Protected paths loaded from: $PROTECTED_FILE"
+    echo ""
+    echo "Resolve these manually, then run:"
+    echo "  git add <files>"
+    echo "  just sync-finish"
+    exit 1
+
+# Commit a resolved sync merge, check out its submodules, and check DFO seam files
+sync-finish:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! git rev-parse --verify -q MERGE_HEAD > /dev/null; then
+        echo "No merge in progress. Run 'just sync <dcp-version>' first."
+        exit 1
+    fi
+    just _sync-keep-workflows
+    UNMERGED=$(git diff --name-only --diff-filter=U)
+    if [ -n "$UNMERGED" ]; then
+        echo "Resolve and stage these files first:"
+        echo "$UNMERGED"
+        exit 1
+    fi
+    # git's whitespace check reports each staged line that starts with a
+    # conflict marker, in every file type. A marker quoted mid-line passes.
+    STRAY=$(git diff --cached --check | grep 'leftover conflict marker' || true)
+    if [ -n "$STRAY" ]; then
+        echo "═══════════════════════════════════════════════════════"
+        echo " Conflict markers found in staged files:"
+        echo "═══════════════════════════════════════════════════════"
+        echo "$STRAY"
+        echo ""
+        echo "Fix these files, git add them, and run 'just sync-finish' again."
+        exit 1
+    fi
+    WEBSITE=$(git rev-parse MERGE_HEAD)
+    BASE=$(git merge-base HEAD MERGE_HEAD)
+    git commit --no-edit
+    echo ""
+    echo "Updating submodules..."
+    git submodule update --init --recursive
+    echo ""
+    just check-overrides "$WEBSITE" "$BASE"
+    echo ""
+    echo "Sync complete."
+
+# Reset .github/workflows/ in a sync merge to HEAD's and list what upstream changed there
+_sync-keep-workflows:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The fork's CI and deploy workflows are DFO-owned, and any workflow
+    # upstream adds would run here, so a sync takes nothing from upstream
+    # under this directory.
+    DIR=.github/workflows/
+    if git diff --cached --quiet HEAD -- "$DIR" && [ -z "$(git ls-files -u -- "$DIR")" ]; then
+        exit 0
+    fi
+    CHANGED=$(git diff --no-renames --name-status "$(git merge-base HEAD MERGE_HEAD)" MERGE_HEAD -- "$DIR")
+    git reset -q --no-refresh HEAD -- "$DIR"
+    git checkout HEAD -- "$DIR"
+    # Paths upstream added or re-added are untracked now; remove them.
+    while IFS=$'\t' read -r _ path; do
+        if [ -n "$path" ] && ! git cat-file -e "HEAD:$path" 2>/dev/null; then rm -f -- "$path"; fi
+    done <<< "$CHANGED"
+    echo "Left upstream's changes to $DIR out of the merge (A added, M modified, D deleted):"
+    sed 's/^/  /' <<< "$CHANGED"
+    echo "Port any you want into the DFO workflows in a separate PR."
 
 # Abort a failed merge and return to previous state
 sync-abort:
@@ -635,20 +646,28 @@ check-markers:
 submodules:
     ./scripts/update_git_submodules.sh
 
-# Check if upstream changed files that DFO overrides (run after sync)
-check-overrides:
+# List DFO seam files upstream changed between base (default: merge-base with HEAD) and website
+check-overrides website base="":
     #!/usr/bin/env bash
     OVERRIDES_FILE=".dfo-overridden-files"
     if [ ! -f "$OVERRIDES_FILE" ]; then
         echo "Warning: $OVERRIDES_FILE not found."
         exit 0
     fi
-    # Find the merge base with upstream
-    MERGE_BASE=$(git merge-base HEAD upstream/{{UPSTREAM_BRANCH}} 2>/dev/null)
-    if [ -z "$MERGE_BASE" ]; then
-        echo "Could not find merge base with upstream. Run 'git fetch upstream' first."
-        exit 0
+    WEBSITE=$(git rev-parse --verify -q "{{website}}^{commit}") \
+        || { echo "Error: {{website}} is not a commit. Run 'git fetch --tags upstream' first."; exit 1; }
+    if [ -n "{{base}}" ]; then
+        BASE=$(git rev-parse --verify -q "{{base}}^{commit}") \
+            || { echo "Error: {{base}} is not a commit."; exit 1; }
+    else
+        BASE=$(git merge-base HEAD "$WEBSITE")
     fi
+    if [ "$BASE" = "$WEBSITE" ]; then
+        echo "HEAD already contains {{website}}. Pass the upstream commit of the previous sync as base:"
+        echo "  just check-overrides {{website}} <previous-website-commit>"
+        exit 1
+    fi
+    RANGE="$BASE..$WEBSITE"
     CHANGED_COUNT=0
     WARNINGS=""
     while IFS= read -r line; do
@@ -657,14 +676,14 @@ check-overrides:
         upstream_file=$(echo "$line" | sed 's/ *->.*$//' | xargs)
         dfo_file=$(echo "$line" | sed 's/^.*-> *//' | xargs)
         # Check if upstream changed this file since last merge
-        if git diff --quiet "$MERGE_BASE"..upstream/{{UPSTREAM_BRANCH}} -- "$upstream_file" 2>/dev/null; then
+        if git diff --quiet "$RANGE" -- "$upstream_file" 2>/dev/null; then
             continue
         fi
         ((CHANGED_COUNT++))
         WARNINGS="$WARNINGS\n  WARNING  $upstream_file"
         WARNINGS="$WARNINGS\n     DFO override/seam: $dfo_file"
         # Show a short summary of what changed
-        STAT=$(git diff --stat "$MERGE_BASE"..upstream/{{UPSTREAM_BRANCH}} -- "$upstream_file" 2>/dev/null | tail -1)
+        STAT=$(git diff --stat "$RANGE" -- "$upstream_file" 2>/dev/null | tail -1)
         if [ -n "$STAT" ]; then
             WARNINGS="$WARNINGS\n     Changes: $STAT"
         fi
@@ -677,7 +696,7 @@ check-overrides:
         echo ""
         echo -e "$WARNINGS"
         echo "Review these changes and update the DFO seam files if needed:"
-        echo "  git diff $MERGE_BASE..upstream/{{UPSTREAM_BRANCH}} -- <file>"
+        echo "  git diff $RANGE -- <file>"
         echo ""
         echo "Seam files carry DFO hooks (Next.js bake-in, nginx routing, start.sh)."
         echo "Changes upstream may require updating custom_dc/dfo/ seam targets."
@@ -694,6 +713,13 @@ _check-env:
         echo "Run 'just setup' or 'just env' first."
         exit 1
     fi
+    # run.sh exits at boot without these.
+    for KEY in GCP_PROJECT_ID GCP_SPANNER_INSTANCE_ID GCP_SPANNER_DATABASE_NAME; do
+        if ! grep -q "^${KEY}=." "{{ENV_FILE}}"; then
+            echo "Error: {{ENV_FILE}} has no $KEY. Run 'just env' to fill in the dfo-dev Spanner settings."
+            exit 1
+        fi
+    done
 
 _check-gcloud:
     #!/usr/bin/env bash

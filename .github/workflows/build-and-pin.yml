@@ -110,11 +110,12 @@ jobs:
           fi
 
       - name: Free disk space
-        # ubuntu-latest has ~14 GB usable, and this build pulls large NL
-        # model/embedding files, installs torch CPU wheels, and exports every
-        # intermediate layer via mode=max cache-to. Removing the runner's
-        # preinstalled Android SDK, .NET, and GHC toolchains buys back room
-        # without a third-party action.
+        # ubuntu-latest has ~14 GB usable. The build holds four stages at
+        # once (Go toolchain and module cache, the website's Python venv,
+        # and two Node installs with their builds) on top of the runtime
+        # base, and mode=max cache-to exports every intermediate layer.
+        # Removing the runner's preinstalled Android SDK, .NET, and GHC
+        # toolchains buys back room without a third-party action.
         run: |
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet

@@ -19,7 +19,7 @@ export interface SlotOption {
    *  to tell probed-zero from never-probed. */
   count?: number;
   /** the engine's raw coverage verdict for this option, when the request probed
-   *  it (custom_dc/api_server/src/search/models.py's Coverage union). Absent for providers
+   *  it (the apis repo's src/search/models/coverage.py Coverage union). Absent for providers
    *  that don't carry coverage through (e.g. FixtureOptions) -- callers should
    *  fall back to `count` in that case (see lib/optionCoverage.ts's
    *  optionState/optionRichness). */

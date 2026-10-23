@@ -10,10 +10,9 @@
  *   - 'unknown'     never probed (coverage off), or this option had no
  *                    constructible/confirmable member to probe at all
  * The engine never fabricates a verdict for the third case (see
- * FamilyResolver.option_coverage's contract in
- * custom_dc/api_server/src/search/engine/families/protocol.py) — coverage stays `None`/
- * `undefined` rather than being reported as zero, so it must never be treated
- * as "no data" here either.
+ * SlotOption.coverage in the apis repo's src/search/models/options.py) —
+ * coverage stays `None`/`undefined` rather than being reported as zero, so it
+ * must never be treated as "no data" here either.
  *
  * partitionOptions groups a list into `main` (observed, richest-first, then
  * unknown in original relative order) and `hidden` (probed-zero, minus any
@@ -24,7 +23,7 @@
 export type CoverageState = 'observed' | 'probed-zero' | 'unknown';
 
 /** State for an engine-shaped coverage value (SlotOption.coverage from
- *  custom_dc/api_server/src/search/models.py): absent means never probed, has_data:false
+ *  the apis repo's src/search/models/options.py): absent means never probed, has_data:false
  *  means the probe ran and confirmed nothing, otherwise observed. */
 export function coverageState(coverage: { has_data?: boolean } | null | undefined): CoverageState {
   if (!coverage) return 'unknown';
@@ -57,7 +56,7 @@ export function countState(count: number | null | undefined): CoverageState {
 /** Flattened production SlotOption shape (app/search/lib/taxonomy/SlotOptionsProvider.ts):
  *  a `count` plus an optional raw `coverage` ride-along. `coverage` is `any`
  *  here for the same reason as coverageRichness's param -- it's the engine's
- *  Coverage discriminated union (custom_dc/api_server/src/search/models.py), which this
+ *  Coverage discriminated union (the apis repo's src/search/models/coverage.py), which this
  *  shared lib deliberately doesn't import to stay usable from both the
  *  flattened production shape and the raw engine shape (app/gutcheck/page.tsx). */
 interface FlattenedOption {
