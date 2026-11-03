@@ -1,5 +1,5 @@
 google-cloud-storage==2.15.0
 absl-py==1.4.0
-deepdiff==6.7.1
+deepdiff==8.6.2
 packaging==25.0
 pyOpenSSL==23.2.0
