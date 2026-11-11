@@ -258,7 +258,7 @@ An upstream sync can conflict only on upstream-tracked files DFO modifies, adds,
 
 ### Mixer patches
 
-`custom_dc/dfo/patches/mixer/` holds DFO changes to the mixer, as `git diff` patches against the pinned `mixer` submodule commit with paths relative to the mixer root. The Dockerfile's `mixer` stage applies every `*.patch` there, in file-name order, with `git apply` before `go build`, and a patch that does not apply fails the build. Number the files (`0001-...`) and start each with a short description of the change.
+`custom_dc/dfo/patches/mixer/` holds DFO changes to the mixer, as `git diff` patches against the pinned `mixer` submodule commit with paths relative to the mixer root. The Dockerfile's `mixer` stage applies every `*.patch` there, in file-name order, with `git apply` before `go build`, and a patch that does not apply fails the build. The `mixer-patches` workflow (`.github/workflows/mixer-patches.yml`) repeats that on pull requests that touch the patches, the `mixer` pointer, or the Dockerfile, then runs `go build ./...` and `go test ./internal/server/spanner/...` at Go 1.24.0. Number the files (`0001-...`) and start each with a short description of the change.
 
 A sync that moves the `mixer` pointer must re-check every patch against the new commit. Copy the mixer sources to a scratch directory outside the submodule, run `git apply --check` for each patch there, then `go build ./...` and `go test` on the packages the patch touches. When a patch no longer applies, rebuild it on the new commit. When upstream already carries the change, `git apply --check --reverse` succeeds on the new commit; delete the patch file in the sync PR.
 
