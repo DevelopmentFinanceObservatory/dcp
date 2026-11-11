@@ -16,3 +16,7 @@ build/cdc_services/nginx.conf -> custom_dc/dfo/nginx-app.conf
 # Dockerfile carries one sentinel-bracketed build stage + COPY blocks into the runner:
 # dfo-dcp (Next.js prototypes app)
 build/cdc_services/Dockerfile -> custom_dc/dfo/prototypes/ (dfo-dcp build stage)
+
+# Dockerfile's mixer stage carries a sentinel-bracketed loop that applies the
+# mixer patches before go build.
+build/cdc_services/Dockerfile -> custom_dc/dfo/patches/mixer/ (mixer stage)

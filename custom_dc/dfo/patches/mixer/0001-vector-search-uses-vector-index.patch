@@ -1,0 +1,167 @@
+Run the /v2/resolve vector search on the Spanner vector index.
+
+A node_types filter inside the approximate nearest neighbour query makes
+Spanner skip NodeEmbeddingIndex and compute the exact distance for every
+row of NodeEmbedding. vectorSearchNode keeps only the null check and the
+embedding label in the ANN query, reads 2 x @limit candidates, and applies
+the threshold and node type filters in an outer query.
+
+diff --git a/internal/server/spanner/golden/query_builder/vector_search_node.sql b/internal/server/spanner/golden/query_builder/vector_search_node.sql
+index 4c545b0..ee5a388 100644
+--- a/internal/server/spanner/golden/query_builder/vector_search_node.sql
++++ b/internal/server/spanner/golden/query_builder/vector_search_node.sql
+@@ -1,17 +1,28 @@
+ 		SELECT
+ 			subject_id,
+-			JSON_VALUE(embedding_content.name) AS name,
++			name,
+ 			node_types AS types,
+-			1 - COSINE_DISTANCE([0.1,0.2,0.3], embeddings) AS cosine_similarity
+-		FROM
+-			`NodeEmbedding`
++			cosine_similarity
++		FROM (
++			SELECT
++				subject_id,
++				JSON_VALUE(embedding_content.name) AS name,
++				node_types,
++				1 - COSINE_DISTANCE([0.1,0.2,0.3], embeddings) AS cosine_similarity
++			FROM
++				`NodeEmbedding`
++			WHERE
++				embeddings IS NOT NULL
++				AND embedding_label = 'base_text_embedding'
++			ORDER BY
++				APPROX_COSINE_DISTANCE([0.1,0.2,0.3], embeddings, options => JSON '{"num_leaves_to_search": 20}')
++			LIMIT 10
++		)
+ 		WHERE
+-			embeddings IS NOT NULL
+-			AND embedding_label = 'base_text_embedding'
+-			AND COSINE_DISTANCE([0.1,0.2,0.3], embeddings) <= 1 - 0.60
++			cosine_similarity >= 0.60
+ 			AND EXISTS (
+ 				SELECT 1 FROM UNNEST(node_types) AS t WHERE t IN ('StatisticalVariable','Topic')
+ 			)
+ 		ORDER BY
+-			APPROX_COSINE_DISTANCE([0.1,0.2,0.3], embeddings, options => JSON '{"num_leaves_to_search": 20}')
++			cosine_similarity DESC
+ 		LIMIT 5
+\ No newline at end of file
+diff --git a/internal/server/spanner/golden/query_builder/vector_search_node_all_types.sql b/internal/server/spanner/golden/query_builder/vector_search_node_all_types.sql
+index b42f3e8..af4e04d 100644
+--- a/internal/server/spanner/golden/query_builder/vector_search_node_all_types.sql
++++ b/internal/server/spanner/golden/query_builder/vector_search_node_all_types.sql
+@@ -1,14 +1,25 @@
+ 		SELECT
+ 			subject_id,
+-			JSON_VALUE(embedding_content.name) AS name,
++			name,
+ 			node_types AS types,
+-			1 - COSINE_DISTANCE([0.1,0.2,0.3], embeddings) AS cosine_similarity
+-		FROM
+-			`NodeEmbedding`
++			cosine_similarity
++		FROM (
++			SELECT
++				subject_id,
++				JSON_VALUE(embedding_content.name) AS name,
++				node_types,
++				1 - COSINE_DISTANCE([0.1,0.2,0.3], embeddings) AS cosine_similarity
++			FROM
++				`NodeEmbedding`
++			WHERE
++				embeddings IS NOT NULL
++				AND embedding_label = 'base_text_embedding'
++			ORDER BY
++				APPROX_COSINE_DISTANCE([0.1,0.2,0.3], embeddings, options => JSON '{"num_leaves_to_search": 20}')
++			LIMIT 10
++		)
+ 		WHERE
+-			embeddings IS NOT NULL
+-			AND embedding_label = 'base_text_embedding'
+-			AND COSINE_DISTANCE([0.1,0.2,0.3], embeddings) <= 1 - 0.60
++			cosine_similarity >= 0.60
+ 		ORDER BY
+-			APPROX_COSINE_DISTANCE([0.1,0.2,0.3], embeddings, options => JSON '{"num_leaves_to_search": 20}')
++			cosine_similarity DESC
+ 		LIMIT 5
+\ No newline at end of file
+diff --git a/internal/server/spanner/query_builder.go b/internal/server/spanner/query_builder.go
+index d9146c5..ba40026 100644
+--- a/internal/server/spanner/query_builder.go
++++ b/internal/server/spanner/query_builder.go
+@@ -820,12 +820,20 @@ func GetEventCollectionDcidsQuery(placeID, eventType, date string) *spanner.Stat
+ 	}
+ }
+ 
++// vectorSearchCandidateFactor sets how many approximate nearest neighbours the
++// vector search reads per requested row. The index scan is approximate, so
++// reading only @limit candidates drops some of the exact top @limit; reading
++// twice as many reproduced the exact top 100 on the DFO graph. The surplus also
++// leaves room for rows the threshold and node type filters remove.
++const vectorSearchCandidateFactor = 2
++
+ // VectorSearchQuery returns a Spanner statement to search nodes using vector similarity.
+ func VectorSearchQuery(tableName string, limit int, embeddings []float64, numLeaves int, threshold float64, nodeTypes []string, embeddingLabel string) *spanner.Statement {
+ 	optionsJSON := fmt.Sprintf(`{"num_leaves_to_search": %d}`, numLeaves)
+ 	params := map[string]interface{}{
+ 		"embeddings":      embeddings,
+ 		"limit":           limit,
++		"candidate_limit": limit * vectorSearchCandidateFactor,
+ 		"embedding_label": embeddingLabel,
+ 	}
+ 	var nodeTypeCondition string
+diff --git a/internal/server/spanner/statements.go b/internal/server/spanner/statements.go
+index 88af610..772f6eb 100644
+--- a/internal/server/spanner/statements.go
++++ b/internal/server/spanner/statements.go
+@@ -791,23 +791,40 @@ OR CreationTimestamp > (
+ 				SELECT 1 FROM UNNEST(node_types) AS t WHERE t IN UNNEST(@node_types)
+ 			)`,
+ 	// vectorSearchNode searches for nodes using vector similarity.
++	// The inner query keeps only the predicates the vector index can serve (the
++	// null check and the embedding label), so Spanner runs an approximate nearest
++	// neighbour scan over the index. A predicate on node_types, which the index
++	// does not hold, makes the optimiser drop the index and compute the exact
++	// distance for every row. The threshold and type filters therefore run on
++	// the @candidate_limit nearest rows in the outer query.
+ 	// %[1]s: Embedding table name (e.g., `NodeEmbedding`).
+ 	// %[2]s: JSON options for APPROX_COSINE_DISTANCE (e.g., {"num_leaves_to_search": 20}).
+ 	// %[3]s: Cosine similarity threshold formatted as float (e.g., 0.60).
+ 	// %[4]s: Optional node type filter clause (nodeTypeExistence when nodeTypes is non-empty, or "" otherwise).
+ 	vectorSearchNode: `		SELECT
+ 			subject_id,
+-			JSON_VALUE(embedding_content.name) AS name,
++			name,
+ 			node_types AS types,
+-			1 - COSINE_DISTANCE(@embeddings, embeddings) AS cosine_similarity
+-		FROM
+-			%[1]s
++			cosine_similarity
++		FROM (
++			SELECT
++				subject_id,
++				JSON_VALUE(embedding_content.name) AS name,
++				node_types,
++				1 - COSINE_DISTANCE(@embeddings, embeddings) AS cosine_similarity
++			FROM
++				%[1]s
++			WHERE
++				embeddings IS NOT NULL
++				AND embedding_label = @embedding_label
++			ORDER BY
++				APPROX_COSINE_DISTANCE(@embeddings, embeddings, options => JSON '%[2]s')
++			LIMIT @candidate_limit
++		)
+ 		WHERE
+-			embeddings IS NOT NULL
+-			AND embedding_label = @embedding_label
+-			AND COSINE_DISTANCE(@embeddings, embeddings) <= 1 - %[3]s%[4]s
++			cosine_similarity >= %[3]s%[4]s
+ 		ORDER BY
+-			APPROX_COSINE_DISTANCE(@embeddings, embeddings, options => JSON '%[2]s')
++			cosine_similarity DESC
+ 		LIMIT @limit`,
+ 	checkSVSourceExistence: `		SELECT DISTINCT c.key AS variable, e2.object_id AS source
+ 		FROM Cache c

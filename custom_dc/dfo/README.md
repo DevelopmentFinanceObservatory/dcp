@@ -39,6 +39,7 @@ The three upstream files (`build/cdc_services/Dockerfile`, `run.sh`, `nginx.conf
 | Upstream file | Hook                                                                     | Delegates to                                    |
 | ------------- | ------------------------------------------------------------------------ | ----------------------------------------------- |
 | `Dockerfile`  | Sentinel-bracketed `dfo-dcp` stage + COPY triplet                        | `custom_dc/dfo/prototypes/` (standalone bundle) |
+| `Dockerfile`  | Sentinel-bracketed `git apply` loop in the `mixer` stage                 | `custom_dc/dfo/patches/mixer/`                  |
 | `run.sh`      | `[ -f .../custom_dc/dfo/start.sh ] && source .../custom_dc/dfo/start.sh` | `custom_dc/dfo/start.sh`                        |
 | `nginx.conf`  | `include /workspace/custom_dc/*/nginx-*.conf;`                           | `custom_dc/dfo/nginx-app.conf`                  |
 
@@ -255,6 +256,14 @@ An upstream sync can conflict only on upstream-tracked files DFO modifies, adds,
 
 `.dfo-protected-paths` lists the paths `sync-resolve` protects from auto-resolution. `.dfo-overridden-files` maps each seam file to its DFO delegate(s), which is what `check-overrides` reads.
 
+### Mixer patches
+
+`custom_dc/dfo/patches/mixer/` holds DFO changes to the mixer, as `git diff` patches against the pinned `mixer` submodule commit with paths relative to the mixer root. The Dockerfile's `mixer` stage applies every `*.patch` there, in file-name order, with `git apply` before `go build`, and a patch that does not apply fails the build. Number the files (`0001-...`) and start each with a short description of the change.
+
+A sync that moves the `mixer` pointer must re-check every patch against the new commit. Copy the mixer sources to a scratch directory outside the submodule, run `git apply --check` for each patch there, then `go build ./...` and `go test` on the packages the patch touches. When a patch no longer applies, rebuild it on the new commit. When upstream already carries the change, `git apply --check --reverse` succeeds on the new commit; delete the patch file in the sync PR.
+
+To write a patch, edit the scratch copy, regenerate any golden files the change moves (`GENERATE_GOLDEN=true go test ./internal/server/spanner/golden/`), and save `git diff` of the changed files.
+
 ---
 
 ## Crash isolation
@@ -297,6 +306,7 @@ A crash in a DC service (mixer, Envoy, website, or MCP) still hits `wait -n` and
 | `start.sh`        | sourced by `run.sh`; starts the Next standalone server in its own restart-loop subshell                                          |
 | `nginx-app.conf`  | included by `nginx.conf`; proxies `/prototype`+`/prototype/`, `/api/search/`, and `/api/datasets` to Next on :3000, redirects legacy `/app` paths to `/prototype`, and gzips JSON, CSV, and SDMX CSV responses |
 | `prototypes/`     | the Next.js app — see below                                                                                                      |
+| `patches/mixer/`  | patches the Dockerfile applies to the mixer sources before `go build` (see [Mixer patches](#mixer-patches))                      |
 
 ### `custom_dc/dfo/prototypes/`
 
@@ -316,7 +326,7 @@ A crash in a DC service (mixer, Envoy, website, or MCP) still hits `wait -n` and
 
 | Upstream file                   | What DFO added                                                                                                                                                                                                                |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build/cdc_services/Dockerfile` | `# >>> DFO bake-in >>>` blocks (a `node:20 AS dfo-dcp` build stage over `custom_dc/dfo/prototypes/` + a COPY block into the runner — standalone bundle, `.next/static`, `public`, `start.sh`/`nginx-app.conf`, `node` binary) |
+| `build/cdc_services/Dockerfile` | `# >>> DFO bake-in >>>` blocks (a `git apply` loop over `custom_dc/dfo/patches/mixer/` in the `mixer` stage, a `node:20 AS dfo-dcp` build stage over `custom_dc/dfo/prototypes/` + a COPY block into the runner — standalone bundle, `.next/static`, `public`, `start.sh`/`nginx-app.conf`, `node` binary) |
 | `build/cdc_services/run.sh`     | One guarded line before `wait -n`: `[ -f /workspace/custom_dc/dfo/start.sh ] && source /workspace/custom_dc/dfo/start.sh`                                                                                                     |
 | `build/cdc_services/nginx.conf` | One include line inside `server {}`: `include /workspace/custom_dc/*/nginx-*.conf;` (covers `custom_dc/dfo/nginx-app.conf`)                                                                                                   |
 
