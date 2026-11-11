@@ -30,7 +30,7 @@ jobs:
         with:
           submodules: false
 
-      # Only the mixer is needed; the import submodule stays unfetched.
+      # Only the mixer is needed. The import submodule stays unfetched.
       - name: Check out the mixer submodule
         run: git submodule update --init --depth 1 mixer
 
