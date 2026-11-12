@@ -1,0 +1,65 @@
+name: Mixer patches
+
+# ONE/DFO: applies custom_dc/dfo/patches/mixer/*.patch to the pinned mixer
+# submodule and runs the build and the Spanner tests on the result, so a patch
+# that stops applying or breaks a test fails the pull request instead of the
+# image build. Runs only when a patch, the mixer pointer, or the Dockerfile
+# changes. A draft pull request runs nothing.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - custom_dc/dfo/patches/mixer/**
+      - mixer
+      - build/cdc_services/Dockerfile
+      - .github/workflows/mixer-patches.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mixer-patches-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mixer-patches:
+    name: mixer-patches
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          submodules: false
+
+      # Only the mixer is needed. The import submodule stays unfetched.
+      - name: Check out the mixer submodule
+        run: git submodule update --init --depth 1 mixer
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          # Matches `FROM golang:` in the mixer stage of build/cdc_services/Dockerfile.
+          go-version: "1.24.0"
+          cache-dependency-path: mixer/go.sum
+
+      # The same loop as the Dockerfile's mixer stage, run from the mixer root.
+      - name: Apply the patches
+        working-directory: mixer
+        run: |
+          set -euo pipefail
+          n=0
+          for p in "$GITHUB_WORKSPACE"/custom_dc/dfo/patches/mixer/*.patch; do
+            [ -e "$p" ] || continue
+            git apply --verbose "$p"
+            n=$((n + 1))
+          done
+          echo "applied $n patches"
+
+      - name: Build
+        working-directory: mixer
+        run: go build ./...
+
+      - name: Test
+        working-directory: mixer
+        run: go test ./internal/server/spanner/...

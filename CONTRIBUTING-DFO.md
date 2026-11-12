@@ -8,7 +8,7 @@ The DFO's Data Commons instance, meaning the mixer and the graph-serving layer u
 
 Two kinds of code live here, and they behave differently.
 
-- **Upstream code.** Everything outside `custom_dc/` tracks datacommonsorg/website and the `mixer` and `import` submodules. We take changes from upstream; we do not write them here.
+- **Upstream code.** Everything outside `custom_dc/` tracks datacommonsorg/website and the `mixer` and `import` submodules. We take changes from upstream; we do not write them here. A change the DFO needs in the mixer ships as a patch in `custom_dc/dfo/patches/mixer/`, which the image build applies (see [Mixer patches](custom_dc/dfo/README.md#mixer-patches)).
 - **ONE Data code.** Everything under `custom_dc/` is ours (for the DFO). `custom_dc/dfo/prototypes` is the frontend. Upstream never touches these paths, so an upstream sync cannot conflict with work there.
 
 The repo builds one container image. A sibling repo, `infra`, deploys it to Cloud Run. This repo builds and pushes an image, and `infra` runs it.
