@@ -33,6 +33,15 @@ COPY mixer/cmd/ cmd
 COPY mixer/esp/ esp
 COPY mixer/deploy/featureflags/ deploy/featureflags
 
+# >>> DFO bake-in (custom_dc/dfo) >>>
+# ONE/DFO: Apply the DFO mixer patches. A patch that does not apply fails the build.
+COPY custom_dc/dfo/patches/mixer/ /tmp/dfo-mixer-patches/
+RUN for p in /tmp/dfo-mixer-patches/*.patch; do \
+        [ -e "$p" ] || continue; \
+        git apply --verbose "$p" || exit 1; \
+    done
+# <<< DFO bake-in <<<
+
 # Build protobuf.
 RUN protoc \
     --include_source_info \
