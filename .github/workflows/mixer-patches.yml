@@ -16,6 +16,9 @@ on:
       - build/cdc_services/Dockerfile
       - .github/workflows/mixer-patches.yml
 
+permissions:
+  contents: read
+
 concurrency:
   group: mixer-patches-${{ github.ref }}
   cancel-in-progress: true
