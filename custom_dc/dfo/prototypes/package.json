@@ -14,7 +14,7 @@
   "dependencies": {
     "@google/adk": "^2.1.0",
     "js-yaml": "^5.4.2",
-    "next": "^16.2",
+    "next": "^16.4",
     "react": "^19",
     "react-dom": "^19",
     "react-markdown": "^10.1.0",
